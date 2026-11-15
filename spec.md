@@ -405,7 +405,7 @@ The result is cached for 15 s and pushed over SSE to the stalls page.
 
 | #   | Item                                                                                                                                                 | Needed by issue |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| Q1  | Confirm the **cash total = platform fee 1% + cash fee 5% (6% total)**, with both fees going to MOM                                                   | #14             |
+| Q1  | ✅ **Confirmed 15 Nov 2026:** cash total = subtotal + platform fee 1% + cash fee 5%; both fees go to MOM                                             | #14             |
 | Q2  | GitHub repo name and visibility (proposal: `subhankar2004/mom`, **private**)                                                                         | #1              |
 | Q3  | **AWS account access**: an IAM Identity Center user, or an admin IAM user for the first setup. Also install the AWS CLI                              | #28             |
 | Q4  | **Domain name** (e.g. `mom-vssut.in`)                                                                                                                | #28 / #29       |

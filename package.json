@@ -1,17 +1,31 @@
 {
   "name": "mom",
+  "version": "0.0.0",
   "private": true,
-  "description": "MOM — campus food-stall ordering. Root scripts for the local Docker backend.",
+  "description": "MOM — campus food-stall pre-ordering (VSSUT). See spec.md.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "db:start": "supabase start",
-    "db:stop": "supabase stop",
-    "db:status": "supabase status",
-    "db:reset": "supabase db reset",
-    "db:new-migration": "supabase migration new",
-    "web": "npm --prefix web run dev -- -H 0.0.0.0",
-    "mobile": "npm --prefix mobile run start"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "check": "npm run format:check && npm run lint && npm run typecheck"
   },
   "devDependencies": {
-    "supabase": "3.1.0"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.15.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.2"
   }
 }

@@ -3,266 +3,47 @@
           (written for someone new to app development)
 =====================================================================
 
-WHAT IS WHAT (read this once)
------------------------------
-Your project folder:  /Users/subhankarpatra/Developer/myWorkSpace/MOM
+WHERE WE ARE
+------------
+We are rebuilding MOM from scratch, one GitHub issue at a time.
+The old prototype (Supabase + Expo) is saved under the git tag
+"prototype-v0". The plan is in spec.md, the to-do list is on GitHub:
+    https://github.com/subhankar2004/MOM/issues
 
-  supabase/   = the BACKEND (database, login, payment code).
-                While developing, it runs on YOUR MAC inside Docker.
-                Later, for real students, it moves to supabase.com (Part 6).
-  web/        = the WEBSITE (students order here; stall owners and you
-                (admin) manage things here).
-  mobile/     = the PHONE APP. You open it on your phone with "Expo Go".
+Right now (after issue #1) the project is only the empty skeleton:
+there is nothing to "run" yet. The local database arrives in issue #2,
+the API in #5 and the website in #6 — this guide grows with them.
 
-The backend's data is kept in its OWN Docker volumes (you can see them
-in Docker Desktop → Volumes):
 
-    supabase_db_mom              ← the database (stalls, menus, orders, users)
-    supabase_storage_mom         ← uploaded files (images later)
-    supabase_edge_runtime_mom    ← payment functions cache
-
-They belong only to MOM — your other projects' volumes are not touched.
-
-Words you will see:
+WORDS YOU WILL SEE
+------------------
   Terminal   = the window where you type commands. In VS Code:
                menu  Terminal → New Terminal   (or press  Ctrl + ` )
   Command    = a line you type in the Terminal, then press Enter.
                Only type the part AFTER the "$ " sign.
-  Server     = a program that keeps running in a Terminal. While it runs,
-               that Terminal is "busy" — open a NEW Terminal tab (the "+"
-               button in VS Code's Terminal panel) for other commands.
-  Ctrl + C   = how you STOP a server (hold Control, press C).
-  .env.local = small private settings file with keys/addresses.
+  Branch     = a separate copy of the code where one issue is worked on.
+  PR         = Pull Request: asks GitHub to merge a branch into "main".
+  Ctrl + C   = stops a running program in the Terminal.
 
 
-=====================================================================
-PART 1 — ONE-TIME SETUP  (already done for you ✅ — just read it)
-=====================================================================
-These were done on 12 Nov 2026. Only redo them on a new computer.
-
-  ✅ Node.js installed                        check:  node -v
-  ✅ Docker Desktop installed
-  ✅ Libraries installed                      (npm install in MOM/, web/, mobile/)
-  ✅ Local backend created with its own volumes, tables + 4 demo stalls
-  ✅ web/.env.local and mobile/.env.local point to the local backend
-
-Still to do yourself:
-  ☐ Install "Expo Go" on your phone (Play Store / App Store, latest version).
-
-On a NEW computer you would run:
-    $ cd /Users/subhankarpatra/Developer/myWorkSpace/MOM
+ONE-TIME SETUP (on a new computer)
+----------------------------------
+    $ git clone https://github.com/subhankar2004/MOM.git
+    $ cd MOM
     $ npm install
-    $ npm --prefix web install
-    $ npm --prefix mobile install
-  then follow Part 2, and create the two .env.local files (see Part 7).
 
 
-=====================================================================
-PART 2 — EVERY DAY: STARTING THE PROJECT  (2 Terminals)
-=====================================================================
-
-STEP 2.0  Open Docker Desktop
------------------------------
-Open the "Docker Desktop" app (Applications folder or Spotlight: Cmd+Space,
-type Docker). Wait until the bottom-left shows it's running.
-Without Docker running, the backend cannot start.
-
-
-STEP 2.1  Start the BACKEND  (Terminal 1)
------------------------------------------
+CHECK THAT EVERYTHING IS OK
+---------------------------
     $ cd /Users/subhankarpatra/Developer/myWorkSpace/MOM
-    $ npm run db:start
-
-Takes ~20 seconds. When it finishes it prints a block of text with
-addresses — that means it worked. This one does NOT stay busy; the
-backend keeps running inside Docker after the command ends.
-
-Useful backend pages (open in your browser):
-    http://127.0.0.1:54323   Supabase Studio — SEE AND EDIT YOUR DATABASE
-                             (Table Editor → stalls, menu_items, orders…)
-    http://127.0.0.1:54324   Mailpit — the LOCAL EMAIL INBOX.
-                             Login codes are "sent" here, not to real email.
+    $ npm run check        (format + lint + typecheck — must say no errors)
 
 
-STEP 2.2  Start the WEBSITE  (same Terminal 1 is fine)
-------------------------------------------------------
-    $ npm run web
+GET THE LATEST CODE AFTER A PR IS MERGED
+----------------------------------------
+    $ git switch main
+    $ git pull
+    $ npm install          (only needed if package.json changed)
 
-Wait until you see  "Ready". LEAVE THIS TERMINAL RUNNING.
-Open your browser:   http://localhost:3000
-
-
-STEP 2.3  Start the PHONE APP  (Terminal 2 — click "+" for a new tab)
----------------------------------------------------------------------
-    $ cd /Users/subhankarpatra/Developer/myWorkSpace/MOM
-    $ npm run mobile
-
-A big QR code appears. LEAVE THIS TERMINAL RUNNING.
-  • Android: open Expo Go → "Scan QR code" → scan it.
-  • iPhone:  open the Camera app → point at the QR → tap the link.
-
-IMPORTANT: phone and Mac must be on the SAME Wi-Fi, and the phone talks to
-your Mac using its Wi-Fi address (see Part 8, "phone can't load stalls").
-
-Handy keys in this Terminal:   r = reload app    w = open in browser
-
-
-=====================================================================
-PART 3 — FIRST TEST: PLACE AN ORDER
-=====================================================================
-1. Website → "Sign in" → type ANY email (e.g. asha@vssut.ac.in) → "Send code".
-2. Open the local inbox  http://127.0.0.1:54324  → open the newest
-   "Your MOM login code" email → copy the 6-digit code → type it in.
-3. Enter your name.
-4. Click a stall (e.g. Dosa Corner) → ADD items → "View cart".
-5. Choose "Pay at the counter" (+5%) → "Place order".
-6. You'll see your TOKEN NUMBER (e.g. #1). 🎉
-
-Make yourself ADMIN:
-7. Open Studio  http://127.0.0.1:54323  → "SQL Editor" → paste (use the
-   email you signed in with) → click "Run":
-
-       update profiles set role = 'admin' where email = 'asha@vssut.ac.in';
-
-8. Refresh the website. "Admin" and "My stall" appear at the top.
-9. "My stall" = the stall owner's screen. Your order is under "New".
-   Click "Start preparing" → "Mark ready" → "Handed over" and watch the
-   student's order page update live (open it in another tab or on phone).
-10. "Admin" = revenue, fee %, add stalls, link a stall owner's email.
-
-
-=====================================================================
-PART 4 — CLOSING / STOPPING EVERYTHING
-=====================================================================
-1. Terminal running the WEBSITE   → click in it → press  Ctrl + C
-2. Terminal running the PHONE APP → click in it → press  Ctrl + C
-3. Stop the backend (any Terminal):
-       $ cd /Users/subhankarpatra/Developer/myWorkSpace/MOM
-       $ npm run db:stop
-4. Close Expo Go on your phone. You may quit Docker Desktop now.
-
-YOUR DATA IS SAFE: db:stop keeps the "supabase_db_mom" volume, so your
-stalls, users and orders are still there next time you run db:start.
-
-⚠  Never press the 🗑 delete button on the "..._mom" volumes in Docker
-   Desktop unless you WANT to erase all MOM data.
-
-
-=====================================================================
-PART 5 — USEFUL BACKEND COMMANDS
-=====================================================================
-(run from  /Users/subhankarpatra/Developer/myWorkSpace/MOM )
-
-  npm run db:status     show the backend addresses & keys again
-  npm run db:stop       stop the backend (data kept)
-  npm run db:start      start it again
-  npm run db:reset      ⚠ ERASE all data and rebuild from scratch:
-                        re-creates tables + the 4 demo stalls.
-                        (Use when you've messed up test data.)
-
-Changing the database structure (later, with Claude's help):
-  npm run db:new-migration add_ratings   creates a new SQL file in
-  supabase/migrations/, then  npm run db:reset  to apply it.
-
-
-=====================================================================
-PART 6 — ONLINE PAYMENTS LOCALLY (OPTIONAL)
-=====================================================================
-"Pay at the counter" works without this.
-
-1. Sign up at https://dashboard.razorpay.com → stay in TEST MODE →
-   Settings → API Keys → "Generate Test Key".
-2. In VS Code, copy  supabase/functions/.env.example  to
-   supabase/functions/.env  and paste your test Key Id and Secret.
-3. Restart the backend:   npm run db:stop   then   npm run db:start
-4. Choose "Pay online" → in the Razorpay popup use UPI  success@razorpay
-   or card 4111 1111 1111 1111, any future expiry, any CVV.
-   (Test mode = no real money.)
-
-
-=====================================================================
-PART 7 — LATER: MOVING TO THE REAL ONLINE BACKEND (supabase.com)
-=====================================================================
-Do this when you want real students to use it. Local Docker = practice;
-supabase.com = the real thing that runs 24×7.
-
-1. https://supabase.com → New project → name "mom", region Mumbai,
-   save the database password.
-2. Push your tables to it:
-       $ cd /Users/subhankarpatra/Developer/myWorkSpace/MOM
-       $ npx supabase login
-       $ npx supabase link --project-ref YOUR-PROJECT-REF
-       $ npx supabase db push
-   Then Studio → SQL Editor → paste supabase/seed.sql → Run (demo stalls,
-   or add your real stalls from /admin instead).
-3. Email code: Authentication → Emails → "Magic Link" AND "Confirm signup"
-   templates → paste the contents of  supabase/templates/login_code.html .
-4. Payments: see README.md "Razorpay" section (secrets + functions deploy).
-5. Change web/.env.local and mobile/.env.local to the cloud values from
-   Project Settings → API (Project URL + anon/publishable key).
-   (The current local values are saved in Part 9 below.)
-
-
-=====================================================================
-PART 8 — COMMON PROBLEMS
-=====================================================================
-"Cannot connect to the Docker daemon" / db:start fails
-    → Docker Desktop isn't open/running. Open it, wait, try again.
-
-"port is already allocated" on db:start
-    → Another project's Supabase is running. Stop it, or run
-      npm run db:stop  then  npm run db:start.
-
-"Port 3000 is already in use"
-    → Website already running in another Terminal. Or run:
-          $ lsof -ti:3000 | xargs kill
-
-Login code never arrives
-    → Locally, emails go to http://127.0.0.1:54324 (Mailpit), NOT to
-      your real inbox.
-
-No stalls showing on the website
-    → Backend not running (Step 2.1), or run  npm run db:reset.
-
-Phone app: can't load stalls / network error
-    → Your Mac's Wi-Fi address changed (it does when you change Wi-Fi).
-      Find it:   $ ipconfig getifaddr en0
-      Put it in  mobile/.env.local  (both lines that have an IP), then
-      stop the phone app (Ctrl + C) and run  npm run mobile  again.
-    → College Wi-Fi often blocks phone↔laptop traffic. Use your phone's
-      hotspot for the Mac, or test the app in the browser (press  w ).
-
-Changed a .env.local file but nothing changed
-    → Stop that server with Ctrl + C and start it again.
-
-Expo Go says the project needs a newer/older SDK
-    → Update Expo Go from the Play Store / App Store.
-
-Anything else → copy the red error text and ask Claude. 🙂
-
-
-=====================================================================
-PART 9 — CHEAT SHEET
-=====================================================================
-cd /Users/subhankarpatra/Developer/myWorkSpace/MOM
-
-  START:   (open Docker Desktop)
-           npm run db:start      backend
-           npm run web           website  → http://localhost:3000
-           npm run mobile        phone    → scan QR with Expo Go   (new tab)
-
-  STOP:    Ctrl + C in the web and mobile Terminals
-           npm run db:stop
-
-  LOOK:    http://127.0.0.1:54323   database (Supabase Studio)
-           http://127.0.0.1:54324   local email inbox (login codes)
-
-Website pages:
-    /              stalls list (students)      /vendor        stall live orders
-    /cart          cart & payment              /vendor/menu   stall menu editor
-    /orders        my orders & tokens          /admin         admin dashboard
-
-Local backend settings (already in the .env.local files):
-    URL:  http://127.0.0.1:54321    (phone uses http://<Mac-IP>:54321)
-    Key:  run  npm run db:status  → "ANON_KEY"
+The full branch → PR → merge routine is in CONTRIBUTING.md.
 =====================================================================

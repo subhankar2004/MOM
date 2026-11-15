@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafaf9;
+  --surface: #ffffff;
+  --foreground: #1c1917;
+  --muted: #78716c;
+  --border: #e7e5e4;
+  --brand: #ea580c;
+  --brand-soft: #fff7ed;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0c0a09;
+    --surface: #1c1917;
+    --foreground: #f5f5f4;
+    --muted: #a8a29e;
+    --border: #292524;
+    --brand: #fb923c;
+    --brand-soft: #2a1608;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+@utility card {
+  @apply rounded-2xl border border-border bg-surface;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-brand text-white hover:brightness-110;
+}
+@utility btn-ghost {
+  @apply btn border border-border bg-surface hover:bg-brand-soft;
+}
+@utility input {
+  @apply w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-brand;
+}

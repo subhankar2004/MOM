@@ -1,0 +1,17 @@
+{
+  "name": "mom",
+  "private": true,
+  "description": "MOM — campus food-stall ordering. Root scripts for the local Docker backend.",
+  "scripts": {
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:status": "supabase status",
+    "db:reset": "supabase db reset",
+    "db:new-migration": "supabase migration new",
+    "web": "npm --prefix web run dev -- -H 0.0.0.0",
+    "mobile": "npm --prefix mobile run start"
+  },
+  "devDependencies": {
+    "supabase": "3.1.0"
+  }
+}

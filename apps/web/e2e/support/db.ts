@@ -120,3 +120,31 @@ export function addActiveOrders(stallId: string, count: number) {
     }
   });
 }
+
+/** Gives a stall a menu: [category, [name, price ₹, available?][]][] */
+export function addMenu(stallId: string, menu: Array<[string, Array<[string, number, boolean?]>]>) {
+  return withDb(async (db) => {
+    for (const [ci, [category, items]] of menu.entries()) {
+      const { rows } = await db.query<{ id: string }>(
+        `insert into menu_categories (stall_id, name, sort_order) values ($1, $2, $3) returning id`,
+        [stallId, category, ci],
+      );
+      for (const [ii, [name, rupees, available]] of items.entries()) {
+        await db.query(
+          `insert into menu_items (stall_id, category_id, name, price_paise, is_veg, is_available, sort_order, description)
+           values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            stallId,
+            rows[0]!.id,
+            name,
+            rupees * 100,
+            ii % 3 !== 0,
+            available ?? true,
+            ii,
+            `Fresh ${name.toLowerCase()}`,
+          ],
+        );
+      }
+    }
+  });
+}

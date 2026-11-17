@@ -239,3 +239,77 @@ describe('midnight reset of vendor switches', () => {
     expect(await resetStallOverrides(app.db)).toEqual([]); // nothing left to reset
   });
 });
+
+describe('GET /v1/stalls/:slug/menu', () => {
+  it('categories in order with their dishes; sold-out flagged; deleted and empty left out', async () => {
+    const app = (t = await createTestApp({}, { now: () => NOON_MONDAY }));
+    const s = await addStall(app, 't8-menu');
+    const [drinks, mains, empty, gone] = await app.db
+      .insert(menuCategories)
+      .values([
+        { stallId: s.id, name: 'Drinks', sortOrder: 2 },
+        { stallId: s.id, name: 'Mains', sortOrder: 1 },
+        { stallId: s.id, name: 'Empty', sortOrder: 3 },
+        { stallId: s.id, name: 'Old', sortOrder: 0, deletedAt: new Date() },
+      ])
+      .returning();
+    await app.db.insert(menuItems).values([
+      { stallId: s.id, categoryId: mains!.id, name: 'Thali', pricePaise: 9000, isVeg: true, sortOrder: 1 },
+      {
+        stallId: s.id,
+        categoryId: mains!.id,
+        name: 'Fish Curry',
+        pricePaise: 14000,
+        isVeg: false,
+        sortOrder: 0,
+        imageKey: 'stalls/x/fish.webp',
+      },
+      {
+        stallId: s.id,
+        categoryId: mains!.id,
+        name: 'Biryani',
+        pricePaise: 15000,
+        isVeg: false,
+        isAvailable: false,
+        sortOrder: 2,
+      },
+      {
+        stallId: s.id,
+        categoryId: mains!.id,
+        name: 'Deleted',
+        pricePaise: 100,
+        isVeg: true,
+        deletedAt: new Date(),
+      },
+      { stallId: s.id, categoryId: drinks!.id, name: 'Lassi', pricePaise: 4000, isVeg: true },
+    ]);
+    void empty;
+    void gone;
+
+    const res = await app.app.inject('/v1/stalls/t8-menu/menu');
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.stall).toMatchObject({ slug: 't8-menu', availability: { state: 'open' } });
+    expect(body.categories.map((c: { name: string }) => c.name)).toEqual(['Mains', 'Drinks']);
+    expect(body.categories[0].items).toEqual([
+      {
+        id: expect.any(String),
+        name: 'Fish Curry',
+        description: null,
+        pricePaise: 14000,
+        isVeg: false,
+        imageUrl: 'http://localhost:8333/mom-images/stalls/x/fish.webp',
+        available: true,
+      },
+      expect.objectContaining({ name: 'Thali', available: true }),
+      expect.objectContaining({ name: 'Biryani', available: false }),
+    ]);
+  });
+
+  it('404 for unknown or draft stalls', async () => {
+    const app = (t = await createTestApp());
+    await addStall(app, 't9-draft', { status: 'draft' });
+    expect((await app.app.inject('/v1/stalls/t9-draft/menu')).statusCode).toBe(404);
+    expect((await app.app.inject('/v1/stalls/nope/menu')).statusCode).toBe(404);
+  });
+});

@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, isNotNull, isNull, min, sql } from 'drizzle-orm';
 import type { Db } from '../../db/client.js';
-import { menuItems, orders, stallHours, stalls } from '../../db/schema/index.js';
+import { menuCategories, menuItems, orders, stallHours, stalls } from '../../db/schema/index.js';
 import { audit } from '../../lib/audit.js';
 import { notFound } from '../../lib/errors.js';
 import { getCurrentSettings } from '../settings/settings.service.js';
@@ -71,6 +71,48 @@ export class StallsService {
       .where(eq(stallHours.stallId, row.id))
       .orderBy(asc(stallHours.weekday), asc(stallHours.opensAt));
     return { ...described!, hours: hours.map(trimSeconds) };
+  }
+
+  /**
+   * The stall's menu for students: categories in order, each with its dishes. Deleted dishes
+   * and categories are left out; sold-out dishes stay visible but flagged (`available: false`);
+   * categories with no dishes are hidden.
+   */
+  async menu(slug: string) {
+    const stall = await this.getBySlug(slug);
+    const [categories, items] = await Promise.all([
+      this.db
+        .select({ id: menuCategories.id, name: menuCategories.name })
+        .from(menuCategories)
+        .where(and(eq(menuCategories.stallId, stall.id), isNull(menuCategories.deletedAt)))
+        .orderBy(asc(menuCategories.sortOrder), asc(menuCategories.name)),
+      this.db
+        .select()
+        .from(menuItems)
+        .where(and(eq(menuItems.stallId, stall.id), isNull(menuItems.deletedAt)))
+        .orderBy(asc(menuItems.sortOrder), asc(menuItems.name)),
+    ]);
+    const base = this.options.publicImageBaseUrl.replace(/\/$/, '');
+    return {
+      stall,
+      categories: categories
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          items: items
+            .filter((i) => i.categoryId === c.id)
+            .map((i) => ({
+              id: i.id,
+              name: i.name,
+              description: i.description,
+              pricePaise: i.pricePaise,
+              isVeg: i.isVeg,
+              imageUrl: i.imageKey ? `${base}/${i.imageKey}` : null,
+              available: i.isAvailable,
+            })),
+        }))
+        .filter((c) => c.items.length > 0),
+    };
   }
 
   /** Turns stall rows into public cards: 5 batched queries regardless of how many stalls. */

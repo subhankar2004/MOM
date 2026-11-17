@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isIndianMobileE164, normalizeIndianMobile } from './phone.js';
+import { isIndianMobileE164, normalizeIndianMobile } from './phone.ts';
 
 describe('normalizeIndianMobile', () => {
   it.each([

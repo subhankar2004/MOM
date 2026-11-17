@@ -49,6 +49,23 @@ images, so local S3 uses [SeaweedFS](https://github.com/seaweedfs/seaweedfs). On
 Database commands: `db:down` (stop, data kept), `db:reset` (⚠ wipe, migrate and seed demo data),
 `db:migrate`, `db:seed`, `db:psql`, `db:logs`.
 
+### Web app (`apps/web`)
+
+Next.js 16 (App Router, Turbopack) + Tailwind CSS 4 + TanStack Query. `npm run dev` serves it on
+<http://localhost:3000>.
+
+| Area        | Routes                                                             | Layout                                   |
+| ----------- | ------------------------------------------------------------------ | ---------------------------------------- |
+| Student     | `/`, `/orders`, `/profile`                                         | header + bottom tab bar (phones first)   |
+| Stall       | `/vendor`, `/vendor/scan`, `/menu`, `/sales`, `/settings`          | side rail on tablets, tab bar on phones  |
+| Admin       | `/admin`, `/admin/revenue`, `/stalls`, `/users`, …                 | sidebar on desktop, menu sheet on phones |
+| Style guide | `/dev/components` (hidden in production unless `SHOW_DEV_PAGES=1`) | every component, light and dark          |
+
+Design tokens (colour, type, radii) are CSS variables in `src/app/globals.css`, with light and dark
+themes. `src/lib/api-client.ts` is the typed client for the API (errors become `ApiError`).
+Browser tests: `npm run build -w @mom/web && npm run test:e2e -w @mom/web` (axe WCAG 2.1 AA checks,
+no sideways scroll at 360 px, keyboard interactions) — they also run in CI.
+
 ### API (`apps/api`)
 
 Fastify 5 + Zod. `npm run dev` serves it on <http://localhost:4000>:

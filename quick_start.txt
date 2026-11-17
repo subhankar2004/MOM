@@ -16,6 +16,8 @@ Done so far:
   #3  automatic checks on GitHub for every PR (CI)
   #4  database tables + 4 demo stalls with menus
   #5  the API server (the "brain" the website will talk to)
+  #6  the website's look (colours, fonts, buttons…) and its 3 areas:
+      students, stall owners (/vendor) and admin (/admin)
 Coming next:
   #4  database tables        #5  the API (server)      #6  the website
 This guide grows with every issue.
@@ -69,7 +71,12 @@ PART 2 — EVERY DAY: STARTING
     $ npm run dev
    API:      http://localhost:4000/health   → {"status":"ok",...}
    API docs: http://localhost:4000/docs     (every endpoint, try them out)
-   Website:  http://localhost:3000          (from issue #6)
+   Website:  http://localhost:3000
+   Stall owner area:  http://localhost:3000/vendor
+   Admin area:        http://localhost:3000/admin
+   Style guide:       http://localhost:3000/dev/components
+                      (every button, card and colour in one page;
+                       the round button top-right switches light/dark)
    Stop it with  Ctrl + C.
 
    Login codes (OTP) are NOT sent by SMS on your Mac — they are printed

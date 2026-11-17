@@ -5,24 +5,10 @@
  *
  * `code` is stable and meant for programs; `message` is safe to show to people.
  */
-export type ErrorCode =
-  | 'BAD_REQUEST'
-  | 'VALIDATION_ERROR'
-  | 'UNAUTHENTICATED'
-  | 'FORBIDDEN'
-  | 'NOT_FOUND'
-  | 'METHOD_NOT_ALLOWED'
-  | 'CONFLICT'
-  | 'PAYLOAD_TOO_LARGE'
-  | 'UNSUPPORTED_MEDIA_TYPE'
-  | 'RATE_LIMITED'
-  | 'SERVICE_UNAVAILABLE'
-  | 'INTERNAL_ERROR';
+import type { ApiErrorBody, ApiErrorCode } from '@mom/shared';
 
-export interface ErrorBody {
-  error: { code: ErrorCode; message: string; details?: unknown };
-  requestId: string;
-}
+export type ErrorCode = ApiErrorCode;
+export type ErrorBody = ApiErrorBody;
 
 export class AppError extends Error {
   constructor(

@@ -372,6 +372,14 @@ The result is cached for 15 s and pushed over SSE to the stalls page.
 
 ## 11. Design system
 
+> **As built (#6) — proposed brand, change any time:** palette after Sambalpuri ikat — indigo ink
+> `#1C2150` / brand `#2B3484`, haldi (turmeric) `#F5B700`, leaf green `#1E7A4C` (veg), chilli
+> `#9C3A1A` (non-veg), with a dark "indigo night" theme. Type: **Big Shoulders** (display, token
+> numbers, prices) + **Schibsted Grotesk** (UI/body). Signature element: the order token drawn as a
+> notched counter ticket; the logo is that ticket with an "m". Tokens live in
+> `apps/web/src/app/globals.css`; components in `apps/web/src/components`; living style guide at
+> `/dev/components`.
+
 - **Mobile-first**, works from 360 px wide. The vendor board is optimised for 768 px+ tablets.
   The admin console is for desktops but still usable on mobile.
 - **Brand:** MOM's own palette, including a warm primary (food) and success green (ready).
@@ -417,7 +425,7 @@ The result is cached for 15 s and pushed over SSE to the stalls page.
 | Q4  | **Domain name** (e.g. `mom-vssut.in`)                                                                                                                | #28 / #29       |
 | Q5  | **Razorpay account**: test keys now; KYC (business entity or sole proprietorship, bank account) before live. Route activation must be requested      | #15 / #26       |
 | Q6  | **SMS DLT registration** (entity ID, sender ID, OTP template). This takes days to weeks, so start early. Until then, staging uses test phone numbers | #28 / #29       |
-| Q7  | Brand: logo, primary colour, tagline (or let Claude propose them)                                                                                    | #6              |
+| Q7  | Brand: logo, primary colour, tagline — **proposed in #6** (ikat indigo + haldi, ticket logo); change it any time                                     | #6              |
 | Q8  | GST registration status and the business entity name for invoices                                                                                    | #25 / #30       |
 | Q9  | First 3–5 pilot stalls: owner phone numbers, menus, photos, timings                                                                                  | #23 / launch    |
 

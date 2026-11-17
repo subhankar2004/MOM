@@ -1,0 +1,54 @@
+# Local development services for MOM (issue #2).
+# Start: npm run db:up · Stop: npm run db:down · Wipe & rebuild: npm run db:reset
+# Data lives in the named volumes mom_pg_data and mom_s3_data.
+name: mom
+
+services:
+  postgres:
+    image: postgres:17.12-alpine
+    container_name: mom_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mom
+      POSTGRES_PASSWORD: mom # local only — real credentials live in AWS Secrets Manager (#28)
+      POSTGRES_DB: mom
+      TZ: UTC
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - mom_pg_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U mom -d mom']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # S3-compatible object storage for menu/stall images.
+  # In AWS this is replaced by S3 + CloudFront (#28).
+  s3:
+    image: chrislusf/seaweedfs:4.54
+    container_name: mom_s3
+    restart: unless-stopped
+    command:
+      - mini
+      - -dir=/data
+      - -bucket=mom-images
+      - -s3.config=/etc/mom/s3.json
+      - -admin.ui=false
+    ports:
+      - '127.0.0.1:${S3_PORT:-8333}:8333'
+    volumes:
+      - mom_s3_data:/data
+      - ./docker/s3/s3.json:/etc/mom/s3.json:ro
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', '-o', '/dev/null', 'http://127.0.0.1:8333/healthz']
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+volumes:
+  mom_pg_data:
+    name: mom_pg_data
+  mom_s3_data:
+    name: mom_s3_data

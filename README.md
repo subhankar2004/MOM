@@ -25,12 +25,27 @@ MOM/
 
 ## Getting started
 
-Needs **Node.js 24+** (`node -v`). Docker Desktop is needed from issue #2 onwards.
+Needs **Node.js 24+** (`node -v`) and **Docker Desktop** (running).
 
 ```bash
 npm install          # installs every workspace
+npm run setup        # creates apps/api/.env and apps/web/.env.local from the examples
+npm run db:up        # starts Postgres 17 + S3-compatible storage in Docker
+npm run env:check    # validates the API settings
+npm run dev          # API on :4000 + web on :3000 (from issues #5 and #6)
 npm run check        # format check + lint + typecheck
 ```
+
+### Local services (`docker-compose.yml`)
+
+| Service    | Image                      | Address                                      | Data volume   |
+| ---------- | -------------------------- | -------------------------------------------- | ------------- |
+| PostgreSQL | `postgres:17.12-alpine`    | `localhost:5432` (dbs `mom`, `mom_test`)     | `mom_pg_data` |
+| S3 storage | `chrislusf/seaweedfs:4.54` | `http://localhost:8333`, bucket `mom-images` | `mom_s3_data` |
+
+Both listen on `127.0.0.1` only. MinIO, the usual choice, no longer publishes Docker
+images, so local S3 uses [SeaweedFS](https://github.com/seaweedfs/seaweedfs). On AWS it is replaced by real S3 + CloudFront (#28).
+Database commands: `db:down` (stop, data kept), `db:reset` (⚠ wipe + rebuild), `db:psql`, `db:logs`.
 
 A beginner-friendly walkthrough lives in [quick_start.txt](quick_start.txt).
 

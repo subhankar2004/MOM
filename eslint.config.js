@@ -22,5 +22,10 @@ export default tseslint.config(
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },
+  {
+    // Command-line scripts talk to the user through the console.
+    files: ['scripts/**', '**/src/scripts/**'],
+    rules: { 'no-console': 'off' },
+  },
   prettier,
 );

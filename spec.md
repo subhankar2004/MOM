@@ -263,11 +263,11 @@ order hasn't been collected yet.
 
 ### 7.2 Environments
 
-| Env       | Purpose                                                      | Data                                                           | Deploys                                  |
-| --------- | ------------------------------------------------------------ | -------------------------------------------------------------- | ---------------------------------------- |
-| `local`   | Development on the Mac                                       | Docker Compose: Postgres + MinIO (S3) + a console SMS provider | `npm run dev`                            |
-| `staging` | Testing a merged PR with real AWS and Razorpay **test mode** | Seed data                                                      | On every merge to `main` (set up in #28) |
-| `prod`    | Real students                                                | Real data, Multi-AZ, backups                                   | On a git tag `v*` + manual approval      |
+| Env       | Purpose                                                      | Data                                                                          | Deploys                                  |
+| --------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------- | ---------------------------------------- |
+| `local`   | Development on the Mac                                       | Docker Compose: Postgres + SeaweedFS (S3-compatible) + a console SMS provider | `npm run dev`                            |
+| `staging` | Testing a merged PR with real AWS and Razorpay **test mode** | Seed data                                                                     | On every merge to `main` (set up in #28) |
+| `prod`    | Real students                                                | Real data, Multi-AZ, backups                                                  | On a git tag `v*` + manual approval      |
 
 ### 7.3 Cost guardrails (AWS credits until June 2027)
 
@@ -464,7 +464,7 @@ builds on.
 
 **Tasks**
 
-- [ ] `docker-compose.yml`: Postgres 17 (volume `mom_pg_data`) and MinIO (volume `mom_s3_data`)
+- [ ] `docker-compose.yml`: Postgres 17 (volume `mom_pg_data`) and SeaweedFS S3 (volume `mom_s3_data`)
       with a bucket auto-created
 - [ ] `.env.example` for each app, plus typed env validation (Zod) that fails fast
 - [ ] Root scripts: `dev` (API + web together), `db:up`, `db:down`, `db:reset`, `db:migrate`, `db:seed`
@@ -952,7 +952,7 @@ builds on.
       doesn't support our Next.js version, use a container on ECS behind CloudFront instead)
 - [ ] GitHub OIDC role; a deploy workflow on merge to `main` (build image → migrate → deploy ECS)
 - [ ] Domains: `staging.<domain>` and `api.staging.<domain>`
-- [ ] Switch the local adapters to the AWS ones: MinIO → S3 + CloudFront, console SMS → AWS End User Messaging SMS (test numbers until DLT is approved)
+- [ ] Switch the local adapters to the AWS ones: SeaweedFS → S3 + CloudFront, console SMS → AWS End User Messaging SMS (test numbers until DLT is approved)
 - [ ] Point the Razorpay test webhook at the staging API; seed staging data
 - [ ] `docs/infra.md` runbook (deploy, roll back, view logs)
 

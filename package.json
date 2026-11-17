@@ -2,7 +2,7 @@
   "name": "mom",
   "version": "0.0.0",
   "private": true,
-  "description": "MOM — campus food-stall pre-ordering (VSSUT). See spec.md.",
+  "description": "MOM \u2014 campus food-stall pre-ordering (VSSUT). See spec.md.",
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -12,6 +12,16 @@
     "packages/*"
   ],
   "scripts": {
+    "setup": "node scripts/setup-env.mjs",
+    "dev": "concurrently --names api,web --prefix-colors blue,green \"npm run dev -w @mom/api --if-present\" \"npm run dev -w @mom/web --if-present\"",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down --volumes && docker compose up -d --wait && npm run db:migrate && npm run db:seed",
+    "db:migrate": "npm run db:migrate -w @mom/api --if-present",
+    "db:seed": "npm run db:seed -w @mom/api --if-present",
+    "db:psql": "docker compose exec postgres psql -U mom -d mom",
+    "db:logs": "docker compose logs -f",
+    "env:check": "npm run env:check -w @mom/api",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -21,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "concurrently": "^10.0.7",
     "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.14.0",

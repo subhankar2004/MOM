@@ -13,6 +13,7 @@ The plan is in spec.md. The old prototype is saved under the git tag
 Done so far:
   #1  project skeleton
   #2  local database + image storage in Docker   ← you can start these
+  #3  automatic checks on GitHub for every PR (CI)
 Coming next:
   #4  database tables        #5  the API (server)      #6  the website
 This guide grows with every issue.
@@ -83,7 +84,9 @@ PART 4 — USEFUL COMMANDS
   npm run db:psql      open a database prompt (type  \q  to leave)
   npm run db:logs      watch what the database is doing (Ctrl + C to stop)
   npm run env:check    check the API settings file is valid
-  npm run check        format + lint + typecheck (must pass before a PR)
+  npm run check        format + lint + typecheck + tests (must pass before a PR)
+  npm test             only the quick tests
+  npm run test:int     database tests (needs  npm run db:up  first)
 
   ⚠ Don't delete the mom_pg_data / mom_s3_data volumes in Docker
     Desktop unless you want to erase all local data.

@@ -76,20 +76,29 @@ silent refresh, axe WCAG 2.1 AA checks in both themes, no sideways scroll at 360
 
 Fastify 5 + Zod. `npm run dev` serves it on <http://localhost:4000>:
 
-| Path                                       | Purpose                                                                |
-| ------------------------------------------ | ---------------------------------------------------------------------- |
-| `GET /health`                              | liveness (process is up)                                               |
-| `GET /ready`                               | readiness: 200 if Postgres answers, 503 if not (load balancer uses it) |
-| `/docs`                                    | interactive OpenAPI docs (not served in production)                    |
-| `POST /v1/auth/otp/request`, `/otp/verify` | phone OTP login (sets httpOnly session cookies)                        |
-| `POST /v1/auth/refresh`, `/logout`         | rotate / end the session                                               |
-| `GET`, `PATCH`, `DELETE /v1/me`            | the signed-in user (name; account deletion)                            |
+| Path                                            | Purpose                                                                |
+| ----------------------------------------------- | ---------------------------------------------------------------------- |
+| `GET /health`                                   | liveness (process is up)                                               |
+| `GET /ready`                                    | readiness: 200 if Postgres answers, 503 if not (load balancer uses it) |
+| `/docs`                                         | interactive OpenAPI docs (not served in production)                    |
+| `POST /v1/auth/otp/request`, `/otp/verify`      | phone OTP login (sets httpOnly session cookies)                        |
+| `POST /v1/auth/refresh`, `/logout`              | rotate / end the session                                               |
+| `GET`, `PATCH`, `DELETE /v1/me`                 | the signed-in user (name; account deletion)                            |
+| `GET /v1/vendor/stalls`, `/stalls/:stallId`     | stall console: my stalls (members) / all (super admin)                 |
+| `POST`, `GET /v1/admin/stalls/:stallId/members` | super admin: register a stall owner's phone, list members + pending    |
+| `POST /v1/admin/users/:userId/suspension`       | super admin: suspend (ends all sessions) or reactivate                 |
 
 **Login (#7):** 6-digit SMS codes stored only as HMAC hashes, valid 5 min, 5 tries, 30 s resend
 cooldown, 5 codes per phone and 30 per IP per hour. Sessions: 15-min JWT access cookie + 30-day
 rotating refresh cookie (`path=/v1/auth`); reusing an old refresh token revokes the session. Cookies
 are httpOnly + SameSite=Lax, and state-changing requests from other origins are refused.
 Locally the code is printed in the API terminal (`SMS_PROVIDER=console`).
+
+**Access (#9):** `requireRole(...)` checks the token's role; `requireStallAccess()` checks stall
+membership in the database on every request (403 for any stall you don't manage — even unknown ids).
+Stall owners are pre-registered by phone: existing accounts get access at once, new ones on first
+sign-in. `SUPER_ADMIN_PHONES` are promoted at sign-in. Every admin change goes to the append-only
+audit log. An authorization matrix test covers 5 kinds of caller × 6 endpoints.
 
 Errors always look like `{ "error": { "code", "message", "details?" }, "requestId" }`.
 Security headers, CORS (only `WEB_ORIGIN`) and per-IP rate limits apply to every route.

@@ -1,27 +1,32 @@
 'use client';
 
 import { Store } from 'lucide-react';
-import { useState } from 'react';
+import { selectStall, useCurrentStall } from '@/lib/vendor-stall';
 
-// Placeholder data until stall access arrives with auth (#9): owners see only their own stalls.
-const DEMO_STALLS = [
-  { id: 'dosa-corner', name: 'Dosa Corner' },
-  { id: 'chai-and-rolls', name: 'Chai & Rolls' },
-];
-
-/** Shown only to owners of several stalls; every vendor page is scoped to the selected one. */
+/**
+ * The stall this console is working on. A picker only for people who manage several
+ * stalls (spec V2); otherwise just the name.
+ */
 export function StallSwitcher() {
-  const [stall, setStall] = useState(DEMO_STALLS[0]!.id);
+  const { stalls, current } = useCurrentStall();
+  if (stalls.length === 1) {
+    return (
+      <span className="flex min-w-0 items-center gap-2">
+        <Store size={20} aria-hidden className="shrink-0 text-ink-muted" />
+        <span className="truncate font-display text-lg font-bold">{current.name}</span>
+      </span>
+    );
+  }
   return (
     <label className="flex min-w-0 items-center gap-2">
       <Store size={20} aria-hidden className="shrink-0 text-ink-muted" />
       <span className="sr-only">Stall</span>
       <select
-        value={stall}
-        onChange={(e) => setStall(e.target.value)}
+        value={current.id}
+        onChange={(e) => selectStall(e.target.value)}
         className="h-10 min-w-0 truncate rounded-(--radius-control) border border-border bg-surface px-2 font-display text-lg font-bold"
       >
-        {DEMO_STALLS.map((s) => (
+        {stalls.map((s) => (
           <option key={s.id} value={s.id}>
             {s.name}
           </option>

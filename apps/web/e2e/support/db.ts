@@ -15,14 +15,23 @@ export async function withDb<T>(fn: (client: pg.Client) => Promise<T>): Promise<
   }
 }
 
-/** Removes every account, code and session the browser tests created. */
+/**
+ * Retires the accounts a previous run created so this run starts with fresh ones.
+ * Like real account deletion, users are anonymised rather than deleted: the audit log
+ * refers to them and is append-only, so hard deletes are (rightly) impossible.
+ */
 export function resetTestUsers() {
   return withDb(async (db) => {
     const like = `${PHONE_PREFIX}%`;
-    await db.query(`delete from refresh_tokens where user_id in (select id from users where phone like $1)`, [
+    await db.query(
+      `update refresh_tokens set revoked_at = now()
+         where revoked_at is null and user_id in (select id from users where phone like $1)`,
+      [like],
+    );
+    await db.query(`update users set phone = null, name = null, deleted_at = now() where phone like $1`, [
       like,
     ]);
-    await db.query(`delete from users where phone like $1`, [like]);
+    await db.query(`delete from vendor_invites where phone like $1`, [like]);
     await db.query(`delete from auth_otps where phone like $1`, [like]);
   });
 }

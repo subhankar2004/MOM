@@ -7,7 +7,9 @@ import { apiDocsEnabled, cookiesSecure, type Env } from './config/env.js';
 import type { Db } from './db/client.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { AuthService } from './modules/auth/auth.service.js';
+import { adminAccessRoutes } from './modules/admin/members.routes.js';
 import { meRoutes } from './modules/auth/me.routes.js';
+import { vendorRoutes } from './modules/vendor/vendor.routes.js';
 import { registerAuth } from './plugins/auth.js';
 import { registerDocs } from './plugins/docs.js';
 import { registerErrorHandling } from './plugins/error-handler.js';
@@ -109,6 +111,7 @@ export async function buildApp({ env, db, logger, sms }: BuildAppOptions): Promi
       otpPepper: env.OTP_PEPPER,
       testPhones: env.SMS_TEST_PHONES,
       testCode: env.SMS_TEST_CODE,
+      superAdminPhones: env.SUPER_ADMIN_PHONES,
     },
     app.log,
   );
@@ -124,6 +127,8 @@ export async function buildApp({ env, db, logger, sms }: BuildAppOptions): Promi
         ratePerMinute: env.AUTH_RATE_LIMIT_PER_MINUTE,
       });
       await v1.register(meRoutes, { prefix: '/me', auth: authService, cookies: cookieConfig });
+      await v1.register(vendorRoutes, { prefix: '/vendor' });
+      await v1.register(adminAccessRoutes, { prefix: '/admin' });
     },
     { prefix: '/v1' },
   );

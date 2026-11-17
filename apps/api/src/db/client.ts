@@ -1,8 +1,15 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { drizzle, type NodePgQueryResultHKT } from 'drizzle-orm/node-postgres';
+import type { PgDatabase } from 'drizzle-orm/pg-core';
 import pg from 'pg';
 import * as schema from './schema/index.js';
 
 export type Database = ReturnType<typeof createDb>['db'];
+
+/**
+ * What application code depends on: the database *or* an open transaction.
+ * (Tests hand the app a transaction that is rolled back afterwards.)
+ */
+export type Db = PgDatabase<NodePgQueryResultHKT, typeof schema>;
 
 /**
  * Creates the connection pool + Drizzle instance. One per process.

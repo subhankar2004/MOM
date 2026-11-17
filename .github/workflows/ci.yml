@@ -86,6 +86,32 @@ jobs:
       - name: Integration tests
         run: npm run test:int
 
+  docker-api:
+    name: API Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build image
+        run: docker build -f apps/api/Dockerfile -t mom-api:ci .
+      - name: Smoke test (no database → alive but not ready)
+        run: |
+          docker run -d --name api -p 4000:4000 \
+            -e NODE_ENV=production -e SMS_PROVIDER=aws \
+            -e DATABASE_URL=postgres://mom:mom@127.0.0.1:1/mom \
+            -e S3_BUCKET=mom-images -e PUBLIC_IMAGE_BASE_URL=https://img.example.com \
+            mom-api:ci
+          for i in $(seq 1 30); do curl -fs localhost:4000/health && break; sleep 1; done
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:4000/health)" = 200
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:4000/ready)" = 503
+          test "$(docker exec api id -u)" = 1000
+      - name: Image size
+        if: always()
+        run: docker image ls mom-api:ci --format 'mom-api:ci {{.Size}}' >> "$GITHUB_STEP_SUMMARY"
+      - name: Container logs
+        if: failure()
+        run: docker logs api
+
   e2e:
     name: End-to-end tests (Playwright)
     # Switched on in issue #11, once the web app has pages to test.

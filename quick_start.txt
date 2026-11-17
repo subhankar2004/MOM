@@ -15,6 +15,7 @@ Done so far:
   #2  local database + image storage in Docker   ← you can start these
   #3  automatic checks on GitHub for every PR (CI)
   #4  database tables + 4 demo stalls with menus
+  #5  the API server (the "brain" the website will talk to)
 Coming next:
   #4  database tables        #5  the API (server)      #6  the website
 This guide grows with every issue.
@@ -64,9 +65,11 @@ PART 2 — EVERY DAY: STARTING
    number after  SUPER_ADMIN_PHONES=  (e.g. SUPER_ADMIN_PHONES=9876543210),
    save, then run   $ npm run db:seed
 
-3. (from issues #5/#6 onwards)
-    $ npm run dev            (starts the API and the website)
-   Website:  http://localhost:3000      API:  http://localhost:4000
+3. Start the API (and, from issue #6, the website):
+    $ npm run dev
+   API:      http://localhost:4000/health   → {"status":"ok",...}
+   API docs: http://localhost:4000/docs     (every endpoint, try them out)
+   Website:  http://localhost:3000          (from issue #6)
    Stop it with  Ctrl + C.
 
    Login codes (OTP) are NOT sent by SMS on your Mac — they are printed

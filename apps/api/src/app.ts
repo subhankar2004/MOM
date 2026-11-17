@@ -1,13 +1,19 @@
 import { randomUUID } from 'node:crypto';
+import cookie from '@fastify/cookie';
 import { sql } from 'drizzle-orm';
 import Fastify, { LogController, type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from 'fastify-type-provider-zod';
-import { apiDocsEnabled, type Env } from './config/env.js';
+import { apiDocsEnabled, cookiesSecure, type Env } from './config/env.js';
 import type { Db } from './db/client.js';
+import { authRoutes } from './modules/auth/auth.routes.js';
+import { AuthService } from './modules/auth/auth.service.js';
+import { meRoutes } from './modules/auth/me.routes.js';
+import { registerAuth } from './plugins/auth.js';
 import { registerDocs } from './plugins/docs.js';
 import { registerErrorHandling } from './plugins/error-handler.js';
 import { registerSecurity } from './plugins/security.js';
 import { healthRoutes } from './routes/health.js';
+import { createSmsProvider, type SmsProvider } from './sms/index.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -22,6 +28,8 @@ export interface BuildAppOptions {
   db: Db;
   /** Override the logger (tests pass `false`). Defaults to pino configured from env. */
   logger?: FastifyServerOptions['logger'];
+  /** Override the SMS provider (tests capture messages). Defaults to SMS_PROVIDER. */
+  sms?: SmsProvider;
 }
 
 /** Accepts an incoming X-Request-Id only if it looks like an id (prevents log injection). */
@@ -50,7 +58,7 @@ export function loggerOptions(env: Pick<Env, 'LOG_LEVEL' | 'NODE_ENV'>): Fastify
  * Builds the API without starting it, so tests can call `app.inject()`.
  * server.ts adds the listening socket and graceful shutdown.
  */
-export async function buildApp({ env, db, logger }: BuildAppOptions): Promise<FastifyInstance> {
+export async function buildApp({ env, db, logger, sms }: BuildAppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: logger ?? loggerOptions(env),
     // Behind the AWS load balancer the real client IP is in X-Forwarded-For (needed for rate limits).
@@ -82,6 +90,8 @@ export async function buildApp({ env, db, logger }: BuildAppOptions): Promise<Fa
 
   registerErrorHandling(app);
   await registerSecurity(app, env);
+  await app.register(cookie);
+  registerAuth(app, { jwtSecret: env.JWT_SECRET, allowedOrigins: env.WEB_ORIGIN });
   if (apiDocsEnabled(env)) await registerDocs(app, env.APP_VERSION);
 
   await app.register(healthRoutes, {
@@ -91,8 +101,27 @@ export async function buildApp({ env, db, logger }: BuildAppOptions): Promise<Fa
     },
   });
 
-  // Versioned business API. Feature routes are registered here from issue #7 onwards.
-  await app.register(async (_v1) => {}, { prefix: '/v1' });
+  const authService = new AuthService(
+    db,
+    sms ?? createSmsProvider(env, app.log),
+    {
+      jwtSecret: env.JWT_SECRET,
+      otpPepper: env.OTP_PEPPER,
+      testPhones: env.SMS_TEST_PHONES,
+      testCode: env.SMS_TEST_CODE,
+    },
+    app.log,
+  );
+  const cookieConfig = { secure: cookiesSecure(env), domain: env.COOKIE_DOMAIN };
+
+  // Versioned business API.
+  await app.register(
+    async (v1) => {
+      await v1.register(authRoutes, { prefix: '/auth', auth: authService, cookies: cookieConfig });
+      await v1.register(meRoutes, { prefix: '/me', auth: authService, cookies: cookieConfig });
+    },
+    { prefix: '/v1' },
+  );
 
   return app;
 }

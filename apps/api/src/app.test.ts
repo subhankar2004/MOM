@@ -224,7 +224,17 @@ describe('API docs', () => {
 
   it('is not served in production', async () => {
     const res = await (
-      await start({ NODE_ENV: 'production', SMS_PROVIDER: 'aws' }, okDb, false)
+      await start(
+        {
+          NODE_ENV: 'production',
+          SMS_PROVIDER: 'aws',
+          AWS_SMS_ORIGINATION_IDENTITY: 'MOMVST',
+          AWS_SMS_DLT_ENTITY_ID: '1',
+          AWS_SMS_DLT_TEMPLATE_ID: '2',
+        },
+        okDb,
+        false,
+      )
     ).inject('/docs/json');
     expect(res.statusCode).toBe(404);
   });

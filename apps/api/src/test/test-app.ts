@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../app.js';
 import { loadEnv, type Env } from '../config/env.js';
 import { createDb, type Db } from '../db/client.js';
+import type { SmsMessage, SmsProvider } from '../sms/index.js';
 import { testDatabaseUrl } from './test-db.js';
 
 /** A valid config for tests; override any variable. */
@@ -13,6 +14,8 @@ export function testEnv(overrides: Record<string, string> = {}): Env {
     DATABASE_URL: 'postgres://mom:mom@127.0.0.1:5432/mom_test',
     S3_BUCKET: 'mom-images',
     PUBLIC_IMAGE_BASE_URL: 'http://localhost:8333/mom-images',
+    JWT_SECRET: 'test-jwt-secret-that-is-long-enough-0123456789',
+    OTP_PEPPER: 'test-otp-pepper-that-is-long-enough-9876543210',
     ...overrides,
   });
 }
@@ -21,6 +24,8 @@ export interface TestApp {
   app: FastifyInstance;
   /** The same transaction the app uses — for arranging data and asserting on it. */
   db: Db;
+  /** Every SMS the app "sent" during the test (nothing really leaves the machine). */
+  sms: SmsMessage[];
   /** Closes the app and rolls back everything the test (and the app) wrote. */
   close: () => Promise<void>;
 }
@@ -55,12 +60,20 @@ export async function createTestApp(envOverrides: Record<string, string> = {}): 
     txReady,
     transaction.then(() => Promise.reject(new Error('transaction ended'))),
   ]);
-  const app = await buildApp({ env: testEnv(envOverrides), db: tx, logger: false });
+  const sms: SmsMessage[] = [];
+  const captureSms: SmsProvider = {
+    name: 'test',
+    send: async (message) => {
+      sms.push(message);
+    },
+  };
+  const app = await buildApp({ env: testEnv(envOverrides), db: tx, logger: false, sms: captureSms });
   await app.ready();
 
   return {
     app,
     db: tx,
+    sms,
     close: async () => {
       await app.close();
       endTest();

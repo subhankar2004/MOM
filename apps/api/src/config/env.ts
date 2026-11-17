@@ -8,6 +8,24 @@ import { z } from 'zod';
  * error lists every bad variable by name — never its value, so secrets are not
  * leaked into logs.
  */
+const phoneList = z
+  .string()
+  .default('')
+  .transform((v, ctx) =>
+    v
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p, i) => {
+        const e164 = normalizeIndianMobile(p);
+        if (!e164) ctx.addIssue({ code: 'custom', message: `entry ${i + 1} is not a valid Indian mobile` });
+        return e164 ?? '';
+      }),
+  );
+
+/** A secret: long enough to resist guessing. Generate with `npm run setup` or `openssl rand -base64 48`. */
+const secret = z.string().min(32, 'must be at least 32 characters (generate a random one)');
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
@@ -45,21 +63,33 @@ const envSchema = z
     SMS_PROVIDER: z.enum(['console', 'aws']).default('console'),
 
     /** Phones that are always super admins (bootstrap, spec §3). Comma separated, any common format. */
-    SUPER_ADMIN_PHONES: z
+    SUPER_ADMIN_PHONES: phoneList,
+
+    // --- Auth (#7) ---
+    /** Signs the 15-minute access tokens (HS256). */
+    JWT_SECRET: secret,
+    /** Key for hashing OTP codes before they are stored (HMAC-SHA256). */
+    OTP_PEPPER: secret,
+    /** Send cookies only over HTTPS. Defaults to on, except in development/test (http://localhost). */
+    COOKIE_SECURE: z.stringbool().optional(),
+    /** Share cookies between api.<domain> and <domain>, e.g. ".mom.example". Unset locally. */
+    COOKIE_DOMAIN: z.string().min(1).optional(),
+    /**
+     * Staging/dev only: these phones get SMS_TEST_CODE instead of a real SMS (store reviewers,
+     * testing before DLT approval). Forbidden in production.
+     */
+    SMS_TEST_PHONES: phoneList,
+    SMS_TEST_CODE: z
       .string()
-      .default('')
-      .transform((v, ctx) =>
-        v
-          .split(',')
-          .map((p) => p.trim())
-          .filter(Boolean)
-          .map((p, i) => {
-            const e164 = normalizeIndianMobile(p);
-            if (!e164)
-              ctx.addIssue({ code: 'custom', message: `entry ${i + 1} is not a valid Indian mobile` });
-            return e164 ?? '';
-          }),
-      ),
+      .regex(/^\d{6}$/, 'must be 6 digits')
+      .optional(),
+
+    // --- AWS End User Messaging SMS (SMS_PROVIDER=aws), India DLT ---
+    AWS_REGION: z.string().min(1).default('ap-south-1'),
+    /** The DLT-registered sender ID (header), e.g. "MOMVST". */
+    AWS_SMS_ORIGINATION_IDENTITY: z.string().min(1).optional(),
+    AWS_SMS_DLT_ENTITY_ID: z.string().min(1).optional(),
+    AWS_SMS_DLT_TEMPLATE_ID: z.string().min(1).optional(),
   })
   .superRefine((env, ctx) => {
     const deployed = env.NODE_ENV === 'staging' || env.NODE_ENV === 'production';
@@ -77,6 +107,33 @@ const envSchema = z
         message: 'static S3 keys are not allowed on AWS; use the ECS task IAM role',
       });
     }
+    if (env.NODE_ENV === 'production' && (env.SMS_TEST_PHONES.length > 0 || env.SMS_TEST_CODE)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SMS_TEST_PHONES'],
+        message: 'test phones with a fixed code are not allowed in production',
+      });
+    }
+    if (env.SMS_TEST_PHONES.length > 0 && !env.SMS_TEST_CODE) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SMS_TEST_CODE'],
+        message: 'required when SMS_TEST_PHONES is set',
+      });
+    }
+    if (env.SMS_PROVIDER === 'aws') {
+      for (const key of [
+        'AWS_SMS_ORIGINATION_IDENTITY',
+        'AWS_SMS_DLT_ENTITY_ID',
+        'AWS_SMS_DLT_TEMPLATE_ID',
+      ] as const) {
+        if (!env[key])
+          ctx.addIssue({ code: 'custom', path: [key], message: 'required when SMS_PROVIDER=aws' });
+      }
+    }
+    if (env.JWT_SECRET === env.OTP_PEPPER) {
+      ctx.addIssue({ code: 'custom', path: ['OTP_PEPPER'], message: 'must be different from JWT_SECRET' });
+    }
     if (Boolean(env.S3_ACCESS_KEY_ID) !== Boolean(env.S3_SECRET_ACCESS_KEY)) {
       ctx.addIssue({
         code: 'custom',
@@ -90,6 +147,8 @@ export type Env = z.infer<typeof envSchema>;
 
 export const isDeployed = (env: Pick<Env, 'NODE_ENV'>) =>
   env.NODE_ENV === 'staging' || env.NODE_ENV === 'production';
+export const cookiesSecure = (env: Pick<Env, 'NODE_ENV' | 'COOKIE_SECURE'>) =>
+  env.COOKIE_SECURE ?? !(env.NODE_ENV === 'development' || env.NODE_ENV === 'test');
 export const apiDocsEnabled = (env: Pick<Env, 'NODE_ENV' | 'API_DOCS'>) =>
   env.API_DOCS ?? env.NODE_ENV !== 'production';
 

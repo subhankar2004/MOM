@@ -16,7 +16,11 @@ export async function registerDocs(app: FastifyInstance, version: string): Promi
         description: 'Campus food-stall pre-ordering. See spec.md §9.',
         version,
       },
-      tags: [{ name: 'ops', description: 'Health and readiness' }],
+      tags: [
+        { name: 'ops', description: 'Health and readiness' },
+        { name: 'auth', description: 'Phone OTP login and sessions (cookies)' },
+        { name: 'me', description: 'The signed-in user' },
+      ],
     },
     transform: jsonSchemaTransform,
   });

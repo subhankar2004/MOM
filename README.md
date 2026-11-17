@@ -70,12 +70,20 @@ no sideways scroll at 360 px, keyboard interactions) — they also run in CI.
 
 Fastify 5 + Zod. `npm run dev` serves it on <http://localhost:4000>:
 
-| Path          | Purpose                                                                |
-| ------------- | ---------------------------------------------------------------------- |
-| `GET /health` | liveness (process is up)                                               |
-| `GET /ready`  | readiness: 200 if Postgres answers, 503 if not (load balancer uses it) |
-| `/docs`       | interactive OpenAPI docs (not served in production)                    |
-| `/v1/...`     | the business API (from issue #7)                                       |
+| Path                                       | Purpose                                                                |
+| ------------------------------------------ | ---------------------------------------------------------------------- |
+| `GET /health`                              | liveness (process is up)                                               |
+| `GET /ready`                               | readiness: 200 if Postgres answers, 503 if not (load balancer uses it) |
+| `/docs`                                    | interactive OpenAPI docs (not served in production)                    |
+| `POST /v1/auth/otp/request`, `/otp/verify` | phone OTP login (sets httpOnly session cookies)                        |
+| `POST /v1/auth/refresh`, `/logout`         | rotate / end the session                                               |
+| `GET`, `PATCH`, `DELETE /v1/me`            | the signed-in user (name; account deletion)                            |
+
+**Login (#7):** 6-digit SMS codes stored only as HMAC hashes, valid 5 min, 5 tries, 30 s resend
+cooldown, 5 codes per phone and 30 per IP per hour. Sessions: 15-min JWT access cookie + 30-day
+rotating refresh cookie (`path=/v1/auth`); reusing an old refresh token revokes the session. Cookies
+are httpOnly + SameSite=Lax, and state-changing requests from other origins are refused.
+Locally the code is printed in the API terminal (`SMS_PROVIDER=console`).
 
 Errors always look like `{ "error": { "code", "message", "details?" }, "requestId" }`.
 Security headers, CORS (only `WEB_ORIGIN`) and per-IP rate limits apply to every route.

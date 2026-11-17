@@ -60,6 +60,8 @@ export const refreshTokens = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     tokenHash: text().notNull().unique('refresh_tokens_token_hash_unique'),
     familyId: uuid().notNull(),
+    /** Set when this token was rotated: the id of the token that replaced it. */
+    replacedBy: uuid(),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
     revokedAt: timestamp({ withTimezone: true }),
     userAgent: text(),

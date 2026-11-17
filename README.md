@@ -49,6 +49,22 @@ images, so local S3 uses [SeaweedFS](https://github.com/seaweedfs/seaweedfs). On
 Database commands: `db:down` (stop, data kept), `db:reset` (⚠ wipe, migrate and seed demo data),
 `db:migrate`, `db:seed`, `db:psql`, `db:logs`.
 
+### API (`apps/api`)
+
+Fastify 5 + Zod. `npm run dev` serves it on <http://localhost:4000>:
+
+| Path          | Purpose                                                                |
+| ------------- | ---------------------------------------------------------------------- |
+| `GET /health` | liveness (process is up)                                               |
+| `GET /ready`  | readiness: 200 if Postgres answers, 503 if not (load balancer uses it) |
+| `/docs`       | interactive OpenAPI docs (not served in production)                    |
+| `/v1/...`     | the business API (from issue #7)                                       |
+
+Errors always look like `{ "error": { "code", "message", "details?" }, "requestId" }`.
+Security headers, CORS (only `WEB_ORIGIN`) and per-IP rate limits apply to every route.
+Container: `docker build -f apps/api/Dockerfile -t mom-api .` (non-root, ~58 MB compressed);
+`node dist/migrate.js` runs migrations as a one-off task.
+
 ### Database schema
 
 Defined with Drizzle in [`apps/api/src/db/schema/`](apps/api/src/db/schema) (spec §8); SQL migrations live in

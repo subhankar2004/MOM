@@ -1,6 +1,6 @@
 import { paise } from '@mom/shared';
 import { count, sql } from 'drizzle-orm';
-import type { Database } from '../client.js';
+import type { Db } from '../client.js';
 import { menuCategories, menuItems, platformSettings, stallHours, stalls, users } from '../schema/index.js';
 import { DEFAULT_SETTINGS, DEMO_STALLS } from './demo-data.js';
 
@@ -22,7 +22,7 @@ export interface SeedResult {
  * Idempotent seed — safe to run again: existing settings, users and stalls are left alone
  * (super-admin phones are only promoted). Runs in one transaction: all or nothing.
  */
-export async function seed(db: Database, options: SeedOptions): Promise<SeedResult> {
+export async function seed(db: Db, options: SeedOptions): Promise<SeedResult> {
   return db.transaction(async (tx) => {
     const result: SeedResult = {
       settingsCreated: false,

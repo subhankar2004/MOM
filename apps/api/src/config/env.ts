@@ -12,6 +12,16 @@ const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
     API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+    /** 127.0.0.1 locally; the Docker image sets 0.0.0.0. */
+    API_HOST: z.string().min(1).default('127.0.0.1'),
+    /** Version reported by /health (the git SHA in CI/CD). */
+    APP_VERSION: z.string().min(1).default('dev'),
+    /** Trust X-Forwarded-For from this many proxy hops (1 behind the AWS ALB). 0 = none. */
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+    /** Default per-IP request budget per minute. Sensitive routes set stricter limits. */
+    RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(10).max(10_000).default(300),
+    /** Serve OpenAPI docs at /docs. Defaults to on, except in production. */
+    API_DOCS: z.stringbool().optional(),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
     /** Allowed browser origin(s) for CORS, comma separated. */
     WEB_ORIGIN: z
@@ -77,6 +87,11 @@ const envSchema = z
   });
 
 export type Env = z.infer<typeof envSchema>;
+
+export const isDeployed = (env: Pick<Env, 'NODE_ENV'>) =>
+  env.NODE_ENV === 'staging' || env.NODE_ENV === 'production';
+export const apiDocsEnabled = (env: Pick<Env, 'NODE_ENV' | 'API_DOCS'>) =>
+  env.API_DOCS ?? env.NODE_ENV !== 'production';
 
 export class EnvValidationError extends Error {
   constructor(public readonly problems: string[]) {

@@ -14,8 +14,8 @@ git pull
 git switch -c 4-database-schema
 
 # 3. Write code + tests, then check everything locally
-npm run check          # format check + lint + typecheck
-npm test               # (from issue #3 onwards)
+npm run check          # format check + lint + typecheck + unit tests
+npm run test:int       # integration tests (needs `npm run db:up`)
 
 # 4. Commit and push
 git add -A
@@ -26,7 +26,8 @@ git push -u origin 4-database-schema
 gh pr create --fill --body "Closes #4"
 ```
 
-6. **CI must be green** (from issue #3), then review the PR and test it locally.
+6. **CI must be green.** GitHub runs the `CI` workflow on every PR; `main` only accepts
+   PRs whose checks pass. Then review the PR and test it locally.
 7. **Squash merge** in GitHub. The issue closes automatically.
 8. `git switch main && git pull`, then take the next issue.
 

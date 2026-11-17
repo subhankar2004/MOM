@@ -33,7 +33,8 @@ npm run setup        # creates apps/api/.env and apps/web/.env.local from the ex
 npm run db:up        # starts Postgres 17 + S3-compatible storage in Docker
 npm run env:check    # validates the API settings
 npm run dev          # API on :4000 + web on :3000 (from issues #5 and #6)
-npm run check        # format check + lint + typecheck
+npm run check        # format check + lint + typecheck + unit tests
+npm run test:int     # integration tests against the mom_test database
 ```
 
 ### Local services (`docker-compose.yml`)
@@ -48,6 +49,19 @@ images, so local S3 uses [SeaweedFS](https://github.com/seaweedfs/seaweedfs). On
 Database commands: `db:down` (stop, data kept), `db:reset` (⚠ wipe + rebuild), `db:psql`, `db:logs`.
 
 A beginner-friendly walkthrough lives in [quick_start.txt](quick_start.txt).
+
+## Continuous integration
+
+Every PR and every push to `main` runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+
+| Job                                 | What it runs                                                 |
+| ----------------------------------- | ------------------------------------------------------------ |
+| Lint, typecheck, unit tests & build | `format:check` → `lint` → `typecheck` → `npm test` → `build` |
+| Integration tests (Postgres)        | `npm run test:int` against a `postgres:17.12-alpine` service |
+| End-to-end tests (Playwright)       | skipped until #11                                            |
+
+Both active jobs are **required** to merge into `main`. Dependabot opens grouped weekly
+update PRs for npm packages, GitHub Actions and the Docker images.
 
 ## Status
 

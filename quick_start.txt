@@ -5,14 +5,17 @@
 
 WHERE WE ARE
 ------------
-We are rebuilding MOM from scratch, one GitHub issue at a time.
-The old prototype (Supabase + Expo) is saved under the git tag
-"prototype-v0". The plan is in spec.md, the to-do list is on GitHub:
+We are rebuilding MOM one GitHub issue at a time:
     https://github.com/subhankar2004/MOM/issues
+The plan is in spec.md. The old prototype is saved under the git tag
+"prototype-v0".
 
-Right now (after issue #1) the project is only the empty skeleton:
-there is nothing to "run" yet. The local database arrives in issue #2,
-the API in #5 and the website in #6 — this guide grows with them.
+Done so far:
+  #1  project skeleton
+  #2  local database + image storage in Docker   ← you can start these
+Coming next:
+  #4  database tables        #5  the API (server)      #6  the website
+This guide grows with every issue.
 
 
 WORDS YOU WILL SEE
@@ -21,29 +24,90 @@ WORDS YOU WILL SEE
                menu  Terminal → New Terminal   (or press  Ctrl + ` )
   Command    = a line you type in the Terminal, then press Enter.
                Only type the part AFTER the "$ " sign.
-  Branch     = a separate copy of the code where one issue is worked on.
-  PR         = Pull Request: asks GitHub to merge a branch into "main".
+  Docker     = runs the database for us inside "containers", so we don't
+               install Postgres on the Mac itself.
+  Volume     = Docker's folder where the database keeps its data. Ours:
+                   mom_pg_data   ← database (users, stalls, orders)
+                   mom_s3_data   ← uploaded images (menu photos)
+  .env file  = small private settings file. Never shared on GitHub.
+  Branch/PR  = see CONTRIBUTING.md
   Ctrl + C   = stops a running program in the Terminal.
 
 
-ONE-TIME SETUP (on a new computer)
-----------------------------------
+PART 1 — ONE-TIME SETUP (already done on this Mac ✅)
+-----------------------------------------------------
+On a NEW computer:
     $ git clone https://github.com/subhankar2004/MOM.git
     $ cd MOM
     $ npm install
+    $ npm run setup          (creates the .env settings files)
 
 
-CHECK THAT EVERYTHING IS OK
----------------------------
+PART 2 — EVERY DAY: STARTING
+----------------------------
+1. Open "Docker Desktop" (Cmd + Space, type Docker, Enter).
+   Wait until it says it's running.
+
+2. In the VS Code Terminal:
     $ cd /Users/subhankarpatra/Developer/myWorkSpace/MOM
-    $ npm run check        (format + lint + typecheck — must say no errors)
-
-
-GET THE LATEST CODE AFTER A PR IS MERGED
-----------------------------------------
     $ git switch main
-    $ git pull
-    $ npm install          (only needed if package.json changed)
+    $ git pull               (gets the latest merged work)
+    $ npm install            (only needed if someone changed packages)
+    $ npm run db:up          (starts database + image storage)
 
-The full branch → PR → merge routine is in CONTRIBUTING.md.
+   It finishes with "Healthy" for mom_postgres and mom_s3. ✅
+
+3. (from issues #5/#6 onwards)
+    $ npm run dev            (starts the API and the website)
+   Website:  http://localhost:3000      API:  http://localhost:4000
+   Stop it with  Ctrl + C.
+
+   Login codes (OTP) are NOT sent by SMS on your Mac — they are printed
+   in this Terminal, in a line starting with  📱 SMS (not really sent).
+
+
+PART 3 — CLOSING FOR THE DAY
+----------------------------
+1. In the Terminal running "npm run dev":  press  Ctrl + C
+2. $ npm run db:down       (stops the database — your data is KEPT)
+3. Quit Docker Desktop (whale icon in the menu bar → Quit).
+
+
+PART 4 — USEFUL COMMANDS
+------------------------
+(run from  /Users/subhankarpatra/Developer/myWorkSpace/MOM )
+
+  npm run db:up        start database + storage
+  npm run db:down      stop them (data kept)
+  npm run db:reset     ⚠ ERASE all local data and rebuild from scratch
+  npm run db:psql      open a database prompt (type  \q  to leave)
+  npm run db:logs      watch what the database is doing (Ctrl + C to stop)
+  npm run env:check    check the API settings file is valid
+  npm run check        format + lint + typecheck (must pass before a PR)
+
+  ⚠ Don't delete the mom_pg_data / mom_s3_data volumes in Docker
+    Desktop unless you want to erase all local data.
+
+
+PART 5 — COMMON PROBLEMS
+------------------------
+"Cannot connect to the Docker daemon" / db:up fails
+    → Docker Desktop isn't running. Open it, wait, try again.
+
+"port is already allocated" / "address already in use" on db:up
+    → Something else uses port 5432 or 8333. Create a file named  .env
+      in the MOM folder (copy .env.example) and change POSTGRES_PORT
+      or S3_PORT — then also change the port in apps/api/.env .
+
+"Invalid environment configuration" when running env:check or dev
+    → It lists which setting in apps/api/.env is wrong. To start over:
+      delete apps/api/.env and run  npm run setup .
+
+Anything else → copy the red error text and ask Claude. 🙂
+
+
+CHEAT SHEET
+-----------
+  START:   open Docker Desktop → npm run db:up → npm run dev
+  STOP:    Ctrl + C → npm run db:down → quit Docker Desktop
 =====================================================================

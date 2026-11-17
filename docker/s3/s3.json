@@ -1,0 +1,13 @@
+{
+  "identities": [
+    {
+      "name": "mom-dev",
+      "credentials": [{ "accessKey": "mom-dev-access-key", "secretKey": "mom-dev-secret-key" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    },
+    {
+      "name": "anonymous",
+      "actions": ["Read:mom-images"]
+    }
+  ]
+}

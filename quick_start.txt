@@ -18,8 +18,8 @@ Done so far:
   #5  the API server (the "brain" the website will talk to)
   #6  the website's look (colours, fonts, buttons…) and its 3 areas:
       students, stall owners (/vendor) and admin (/admin)
-  #7  login with a phone number + 6-digit code (server side; the
-      login screen arrives in #8)
+  #7  login with a phone number + 6-digit code (server side)
+  #8  the login screen, staying signed in, and who can open which area
 Coming next:
   #4  database tables        #5  the API (server)      #6  the website
 This guide grows with every issue.
@@ -84,10 +84,10 @@ PART 2 — EVERY DAY: STARTING
 
    Login codes (OTP) are NOT sent by SMS on your Mac — they are printed
    in this Terminal, in a line starting with  📱 SMS (not really sent).
-   To try login before the login screen exists (#8): open the API docs
-   http://localhost:4000/docs → "auth" → POST /v1/auth/otp/request →
-   "Try it out" with {"phone": "your number"}, copy the code from the
-   Terminal, then POST /v1/auth/otp/verify with the phone and code.
+   To sign in: open http://localhost:3000/login, type your number,
+   copy the 6-digit code from this Terminal into the boxes.
+   Your number is in SUPER_ADMIN_PHONES (apps/api/.env), so you land
+   on the admin area (/admin). Any other number becomes a student.
 
 
 PART 3 — CLOSING FOR THE DAY

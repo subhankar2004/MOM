@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { RequireRole } from '@/components/auth/require-role';
 import { VendorShell } from '@/components/shell/vendor-shell';
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function VendorLayout({ children }: { children: ReactNode }) {
-  return <VendorShell>{children}</VendorShell>;
+  return (
+    <RequireRole area="vendor">
+      <VendorShell>{children}</VendorShell>
+    </RequireRole>
+  );
 }

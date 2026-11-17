@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start --port 3000",
     "typecheck": "next typegen && tsc -p tsconfig.json",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "e2e": "SHOW_DEV_PAGES=1 NEXT_PUBLIC_API_URL=http://127.0.0.1:4100 next build && playwright test"
   },
   "dependencies": {
     "@mom/shared": "*",

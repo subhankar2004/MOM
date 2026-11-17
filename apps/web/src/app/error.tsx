@@ -14,6 +14,7 @@ export default function ErrorPage({
   return (
     <main id="main" className="flex min-h-dvh items-center justify-center">
       <EmptyState
+        as="h1"
         icon={<TriangleAlert size={40} aria-hidden />}
         title="Something went wrong on this page"
         description={`Try again. If it keeps happening, share this code with MOM support: ${error.digest ?? 'unknown'}`}

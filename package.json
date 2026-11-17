@@ -27,9 +27,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "vitest run --project shared --project api",
+    "test": "vitest run --project shared --project web --project api",
     "test:int": "vitest run --project api-int",
-    "test:watch": "vitest --project shared --project api",
+    "test:watch": "vitest --project shared --project web --project api",
     "build": "npm run build --workspaces --if-present",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test"
   },

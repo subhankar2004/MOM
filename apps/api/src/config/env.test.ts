@@ -5,6 +5,16 @@ const base = {
   DATABASE_URL: 'postgres://mom:mom@localhost:5432/mom',
   S3_BUCKET: 'mom-images',
   PUBLIC_IMAGE_BASE_URL: 'http://localhost:8333/mom-images',
+  JWT_SECRET: 'j'.repeat(40),
+  OTP_PEPPER: 'p'.repeat(40),
+};
+
+/** What production needs on top of `base`: real SMS with India DLT ids. */
+const awsSms = {
+  SMS_PROVIDER: 'aws',
+  AWS_SMS_ORIGINATION_IDENTITY: 'MOMVST',
+  AWS_SMS_DLT_ENTITY_ID: '1101',
+  AWS_SMS_DLT_TEMPLATE_ID: '1107',
 };
 
 function problemsOf(source: Record<string, string | undefined>): string[] {
@@ -77,8 +87,8 @@ describe('loadEnv', () => {
   it.each(['staging', 'production'])('forbids static S3 keys on %s', (NODE_ENV) => {
     const problems = problemsOf({
       ...base,
+      ...awsSms,
       NODE_ENV,
-      SMS_PROVIDER: 'aws',
       S3_ACCESS_KEY_ID: 'AKIA-something',
       S3_SECRET_ACCESS_KEY: 'shh',
     });
@@ -109,6 +119,58 @@ describe('loadEnv', () => {
     expect(loadEnv(base).SUPER_ADMIN_PHONES).toEqual([]);
     const problems = problemsOf({ ...base, SUPER_ADMIN_PHONES: '9876543210,12345' });
     expect(problems).toEqual(['SUPER_ADMIN_PHONES: entry 2 is not a valid Indian mobile']);
+  });
+
+  describe('auth settings (#7)', () => {
+    it('requires long, distinct login secrets', () => {
+      expect(problemsOf({ ...base, JWT_SECRET: 'short' })).toEqual([
+        expect.stringMatching(/^JWT_SECRET: must be at least 32 characters/),
+      ]);
+      expect(problemsOf({ ...base, OTP_PEPPER: base.JWT_SECRET })).toEqual([
+        'OTP_PEPPER: must be different from JWT_SECRET',
+      ]);
+      expect(problemsOf({ ...base, JWT_SECRET: undefined }).some((p) => p.startsWith('JWT_SECRET:'))).toBe(
+        true,
+      );
+    });
+
+    it('cookies are Secure everywhere except local development and tests', async () => {
+      const { cookiesSecure } = await import('./env.js');
+      expect(cookiesSecure({ NODE_ENV: 'development', COOKIE_SECURE: undefined })).toBe(false);
+      expect(cookiesSecure({ NODE_ENV: 'test', COOKIE_SECURE: undefined })).toBe(false);
+      expect(cookiesSecure({ NODE_ENV: 'staging', COOKIE_SECURE: undefined })).toBe(true);
+      expect(cookiesSecure({ NODE_ENV: 'production', COOKIE_SECURE: undefined })).toBe(true);
+      expect(cookiesSecure({ NODE_ENV: 'development', COOKIE_SECURE: true })).toBe(true);
+    });
+
+    it('allows test phones with a fixed code outside production only', () => {
+      const env = loadEnv({ ...base, SMS_TEST_PHONES: '9000000001', SMS_TEST_CODE: '123456' });
+      expect(env.SMS_TEST_PHONES).toEqual(['+919000000001']);
+      expect(problemsOf({ ...base, SMS_TEST_PHONES: '9000000001' })).toEqual([
+        'SMS_TEST_CODE: required when SMS_TEST_PHONES is set',
+      ]);
+      expect(
+        problemsOf({
+          ...base,
+          ...awsSms,
+          NODE_ENV: 'production',
+          SMS_TEST_PHONES: '9000000001',
+          SMS_TEST_CODE: '123456',
+        }),
+      ).toEqual([expect.stringMatching(/^SMS_TEST_PHONES: .*not allowed in production/)]);
+      expect(problemsOf({ ...base, SMS_TEST_PHONES: '9000000001', SMS_TEST_CODE: '12ab56' })).toEqual([
+        'SMS_TEST_CODE: must be 6 digits',
+      ]);
+    });
+
+    it('AWS SMS needs the DLT sender and template ids', () => {
+      expect(problemsOf({ ...base, SMS_PROVIDER: 'aws' })).toEqual([
+        'AWS_SMS_ORIGINATION_IDENTITY: required when SMS_PROVIDER=aws',
+        'AWS_SMS_DLT_ENTITY_ID: required when SMS_PROVIDER=aws',
+        'AWS_SMS_DLT_TEMPLATE_ID: required when SMS_PROVIDER=aws',
+      ]);
+      expect(loadEnv({ ...base, ...awsSms, NODE_ENV: 'production' }).SMS_PROVIDER).toBe('aws');
+    });
   });
 
   it('reports every problem at once', () => {

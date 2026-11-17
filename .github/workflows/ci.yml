@@ -100,6 +100,9 @@ jobs:
             -e NODE_ENV=production -e SMS_PROVIDER=aws \
             -e DATABASE_URL=postgres://mom:mom@127.0.0.1:1/mom \
             -e S3_BUCKET=mom-images -e PUBLIC_IMAGE_BASE_URL=https://img.example.com \
+            -e JWT_SECRET=ci-only-jwt-secret-not-used-anywhere-0123456789 \
+            -e OTP_PEPPER=ci-only-otp-pepper-not-used-anywhere-9876543210 \
+            -e AWS_SMS_ORIGINATION_IDENTITY=CITEST -e AWS_SMS_DLT_ENTITY_ID=0 -e AWS_SMS_DLT_TEMPLATE_ID=0 \
             mom-api:ci
           for i in $(seq 1 30); do curl -fs localhost:4000/health && break; sleep 1; done
           test "$(curl -s -o /dev/null -w '%{http_code}' localhost:4000/health)" = 200

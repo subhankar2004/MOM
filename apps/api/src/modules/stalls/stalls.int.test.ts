@@ -135,7 +135,7 @@ describe('GET /v1/stalls', () => {
     });
     const open = list.find((s) => s.slug === 't1-open')!;
     expect(open.availability).toMatchObject({ state: 'open', closesAt: '2026-11-16T16:00:00.000Z' }); // 21:30 IST
-    expect(res.headers['cache-control']).toBe('public, max-age=15, stale-while-revalidate=30');
+    expect(res.headers['cache-control']).toBe('public, max-age=0, s-maxage=15');
   });
 
   it('works without signing in', async () => {
@@ -192,6 +192,8 @@ describe('GET /v1/stalls', () => {
       ['t4-a', { upi: true, cash: true }, 4500],
       ['t4-b', { upi: false, cash: false }, null],
     ]);
+    // Dish names for search: available, not deleted
+    expect((list[0] as unknown as { dishes: string[] }).dishes).toEqual(['Item 4500', 'Item 6000']);
   });
 });
 

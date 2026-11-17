@@ -21,6 +21,8 @@ export interface PublicStall {
   congestion: ReturnType<typeof congestion>;
   payments: { upi: boolean; cash: boolean };
   startingPricePaise: number | null;
+  /** Names of dishes available now (for "search by dish"); at most 60. */
+  dishes: string[];
 }
 
 const STATE_ORDER = { open: 0, paused: 1, closed: 2 } as const;
@@ -71,11 +73,11 @@ export class StallsService {
     return { ...described!, hours: hours.map(trimSeconds) };
   }
 
-  /** Turns stall rows into public cards: 4 batched queries regardless of how many stalls. */
+  /** Turns stall rows into public cards: 5 batched queries regardless of how many stalls. */
   private async describe(rows: StallRow[]): Promise<PublicStall[]> {
     if (rows.length === 0) return [];
     const ids = rows.map((r) => r.id);
-    const [hours, active, prices, settings] = await Promise.all([
+    const [hours, active, prices, dishes, settings] = await Promise.all([
       this.db.select().from(stallHours).where(inArray(stallHours.stallId, ids)),
       this.db
         .select({ stallId: orders.stallId, n: sql<number>`count(*)::int` })
@@ -89,6 +91,13 @@ export class StallsService {
           and(inArray(menuItems.stallId, ids), eq(menuItems.isAvailable, true), isNull(menuItems.deletedAt)),
         )
         .groupBy(menuItems.stallId),
+      this.db
+        .select({ stallId: menuItems.stallId, name: menuItems.name })
+        .from(menuItems)
+        .where(
+          and(inArray(menuItems.stallId, ids), eq(menuItems.isAvailable, true), isNull(menuItems.deletedAt)),
+        )
+        .orderBy(asc(menuItems.sortOrder), asc(menuItems.name)),
       getCurrentSettings(this.db),
     ]);
     const now = this.now();
@@ -127,6 +136,10 @@ export class StallsService {
       // UPI needs an activated Razorpay Route account, whatever the toggle says (spec §6.2 V7).
       payments: { upi: s.upiEnabled && s.routeStatus === 'activated', cash: s.cashEnabled },
       startingPricePaise: prices.find((p) => p.stallId === s.id)?.min ?? null,
+      dishes: dishes
+        .filter((d) => d.stallId === s.id)
+        .slice(0, 60)
+        .map((d) => d.name),
     }));
   }
 }

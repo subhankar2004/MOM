@@ -40,6 +40,8 @@ const envSchema = z
     RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(10).max(10_000).default(300),
     /** Burst limit per IP per minute for requesting login codes (verify gets twice this). */
     AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(10),
+    /** How long the public stall list is reused, in seconds (spec §10: 15). 0 = always fresh. */
+    PUBLIC_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).max(300).default(15),
     /** Run background jobs (pg-boss) in this process. */
     JOBS_ENABLED: z.stringbool().default(true),
     /** Serve OpenAPI docs at /docs. Defaults to on, except in production. */

@@ -52,6 +52,8 @@ export function apiEnv(): Record<string, string> {
     SMS_TEST_CODE: TEST_CODE,
     // The admin becomes super admin by signing in (bootstrap rule, #9).
     SUPER_ADMIN_PHONES: PHONES.admin,
+    // Always-fresh stall list, so tests see database changes on the next poll.
+    PUBLIC_CACHE_TTL_SECONDS: '0',
     // Many sign-ins from one machine in a few seconds.
     AUTH_RATE_LIMIT_PER_MINUTE: '500',
     RATE_LIMIT_PER_MINUTE: '5000',

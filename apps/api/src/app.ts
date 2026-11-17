@@ -145,7 +145,7 @@ export async function buildApp({
         stalls: new StallsService(db, {
           publicImageBaseUrl: env.PUBLIC_IMAGE_BASE_URL,
           now,
-          cacheTtlMs: stallsCacheTtlMs,
+          cacheTtlMs: stallsCacheTtlMs ?? env.PUBLIC_CACHE_TTL_SECONDS * 1000,
         }),
       });
       await v1.register(vendorRoutes, { prefix: '/vendor' });

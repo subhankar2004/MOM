@@ -22,16 +22,19 @@ export const publicStallSchema = z.object({
   congestion: z.object({ level: z.enum(['low', 'moderate', 'busy']), waitMinutes: z.number().int() }),
   payments: z.object({ upi: z.boolean(), cash: z.boolean() }),
   startingPricePaise: z.number().int().nullable(),
+  /** Available dish names, so clients can search by dish. */
+  dishes: z.array(z.string()),
 });
 
 const hoursSchema = z.object({ weekday: z.number().int(), opensAt: z.string(), closesAt: z.string() });
 
 /** Public (no sign-in): GET /v1/stalls and /v1/stalls/:slug. */
 export const stallsRoutes: FastifyPluginAsyncZod<{ stalls: StallsService }> = async (app, { stalls }) => {
-  // Shared caches (CloudFront, browsers) may reuse the answer briefly; it changes slowly.
+  // A CDN (CloudFront) may reuse the answer for 15 s (s-maxage), but browsers must always ask
+  // again (max-age=0): the list is polled for live wait times, and a browser-cached copy
+  // would show an out-of-date busy meter.
   app.addHook('onSend', async (_req, reply) => {
-    if (reply.statusCode === 200)
-      reply.header('cache-control', 'public, max-age=15, stale-while-revalidate=30');
+    if (reply.statusCode === 200) reply.header('cache-control', 'public, max-age=0, s-maxage=15');
   });
 
   app.get(

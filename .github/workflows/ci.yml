@@ -70,6 +70,19 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Migrations match the schema
+        # Fails if someone changed src/db/schema without committing the generated migration.
+        run: |
+          npm run db:generate -w @mom/api
+          if [ -n "$(git status --porcelain apps/api/drizzle)" ]; then
+            git status --porcelain apps/api/drizzle
+            echo "::error::Schema changed without a migration. Run 'npm run db:generate -w @mom/api' and commit apps/api/drizzle."
+            exit 1
+          fi
+      - name: Apply migrations to an empty database
+        run: npm run db:migrate -w @mom/api
+        env:
+          DATABASE_URL: postgres://mom:mom@localhost:5432/mom_test
       - name: Integration tests
         run: npm run test:int
 

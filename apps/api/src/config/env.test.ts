@@ -102,6 +102,15 @@ describe('loadEnv', () => {
     }
   });
 
+  it('normalises super-admin phones and rejects bad ones without echoing them', () => {
+    expect(loadEnv({ ...base, SUPER_ADMIN_PHONES: '98765 43210, +916000000000' }).SUPER_ADMIN_PHONES).toEqual(
+      ['+919876543210', '+916000000000'],
+    );
+    expect(loadEnv(base).SUPER_ADMIN_PHONES).toEqual([]);
+    const problems = problemsOf({ ...base, SUPER_ADMIN_PHONES: '9876543210,12345' });
+    expect(problems).toEqual(['SUPER_ADMIN_PHONES: entry 2 is not a valid Indian mobile']);
+  });
+
   it('reports every problem at once', () => {
     expect(problemsOf({ API_PORT: 'abc' }).length).toBeGreaterThanOrEqual(4);
   });

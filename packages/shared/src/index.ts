@@ -1,5 +1,5 @@
 /**
- * @mom/shared — code shared by the API and the web app
- * (money helpers, fee maths, types). Filled in from issue #4 onwards.
+ * @mom/shared — code shared by the API and the web app.
  */
-export const APP_NAME = 'MOM';
+export * from './money.js';
+export * from './phone.js';

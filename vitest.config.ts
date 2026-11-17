@@ -31,6 +31,7 @@ export default defineConfig({
           include: ['src/**/*.int.test.ts'],
           // Integration tests share one database: run files one at a time.
           fileParallelism: false,
+          globalSetup: ['src/test/global-setup.ts'],
           testTimeout: 15_000,
         },
       },

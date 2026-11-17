@@ -46,7 +46,15 @@ npm run test:int     # integration tests against the mom_test database
 
 Both listen on `127.0.0.1` only. MinIO, the usual choice, no longer publishes Docker
 images, so local S3 uses [SeaweedFS](https://github.com/seaweedfs/seaweedfs). On AWS it is replaced by real S3 + CloudFront (#28).
-Database commands: `db:down` (stop, data kept), `db:reset` (⚠ wipe + rebuild), `db:psql`, `db:logs`.
+Database commands: `db:down` (stop, data kept), `db:reset` (⚠ wipe, migrate and seed demo data),
+`db:migrate`, `db:seed`, `db:psql`, `db:logs`.
+
+### Database schema
+
+Defined with Drizzle in [`apps/api/src/db/schema/`](apps/api/src/db/schema) (spec §8); SQL migrations live in
+[`apps/api/drizzle/`](apps/api/drizzle). To change the schema: edit the schema files → `npm run db:generate -w @mom/api`
+→ review the new SQL → `npm run db:migrate` → commit both. CI fails if the two are out of sync.
+`npm run db:studio -w @mom/api` opens a browser view of the data.
 
 A beginner-friendly walkthrough lives in [quick_start.txt](quick_start.txt).
 

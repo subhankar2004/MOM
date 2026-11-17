@@ -14,6 +14,7 @@ Done so far:
   #1  project skeleton
   #2  local database + image storage in Docker   ← you can start these
   #3  automatic checks on GitHub for every PR (CI)
+  #4  database tables + 4 demo stalls with menus
 Coming next:
   #4  database tables        #5  the API (server)      #6  the website
 This guide grows with every issue.
@@ -55,8 +56,13 @@ PART 2 — EVERY DAY: STARTING
     $ git pull               (gets the latest merged work)
     $ npm install            (only needed if someone changed packages)
     $ npm run db:up          (starts database + image storage)
+    $ npm run db:migrate     (applies any new database changes)
 
    It finishes with "Healthy" for mom_postgres and mom_s3. ✅
+
+   Make yourself SUPER ADMIN (once): open apps/api/.env, put your mobile
+   number after  SUPER_ADMIN_PHONES=  (e.g. SUPER_ADMIN_PHONES=9876543210),
+   save, then run   $ npm run db:seed
 
 3. (from issues #5/#6 onwards)
     $ npm run dev            (starts the API and the website)
@@ -80,7 +86,11 @@ PART 4 — USEFUL COMMANDS
 
   npm run db:up        start database + storage
   npm run db:down      stop them (data kept)
-  npm run db:reset     ⚠ ERASE all local data and rebuild from scratch
+  npm run db:reset     ⚠ ERASE all local data, rebuild the tables and
+                       re-add the 4 demo stalls with their menus
+  npm run db:migrate   apply new database changes (after git pull)
+  npm run db:seed      add default fees, super admins, demo stalls
+                       (safe to run again — it never duplicates)
   npm run db:psql      open a database prompt (type  \q  to leave)
   npm run db:logs      watch what the database is doing (Ctrl + C to stop)
   npm run env:check    check the API settings file is valid

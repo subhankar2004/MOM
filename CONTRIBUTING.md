@@ -37,7 +37,10 @@ gh pr create --fill --body "Closes #4"
   `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`, `ci:`, with a scope where it helps
   (`feat(api): …`), and the issue number at the end (`(#12)`).
 - **Branches:** `<issue>-<kebab-name>`, e.g. `15-razorpay-upi`.
-- **Money** is always an integer number of **paise**. Never use floats for rupees.
+- **Money** is always an integer number of **paise**, and fee rates are **basis points** (100 = 1 %).
+  Use the helpers in `@mom/shared` (`paise`, `calcFees`, `formatINR`). Never use floats for rupees.
+- **Database changes** go through migrations: edit `apps/api/src/db/schema/`, run
+  `npm run db:generate -w @mom/api`, and commit the generated SQL. Never edit an applied migration.
 - **Secrets** never go into git. Only `.env.example` files are committed.
 - **Formatting** is Prettier's job. Run `npm run format` before committing.
 

@@ -1,3 +1,4 @@
+import { normalizeIndianMobile } from '@mom/shared';
 import { z } from 'zod';
 
 /**
@@ -32,6 +33,23 @@ const envSchema = z
     PUBLIC_IMAGE_BASE_URL: z.url(),
 
     SMS_PROVIDER: z.enum(['console', 'aws']).default('console'),
+
+    /** Phones that are always super admins (bootstrap, spec §3). Comma separated, any common format. */
+    SUPER_ADMIN_PHONES: z
+      .string()
+      .default('')
+      .transform((v, ctx) =>
+        v
+          .split(',')
+          .map((p) => p.trim())
+          .filter(Boolean)
+          .map((p, i) => {
+            const e164 = normalizeIndianMobile(p);
+            if (!e164)
+              ctx.addIssue({ code: 'custom', message: `entry ${i + 1} is not a valid Indian mobile` });
+            return e164 ?? '';
+          }),
+      ),
   })
   .superRefine((env, ctx) => {
     const deployed = env.NODE_ENV === 'staging' || env.NODE_ENV === 'production';

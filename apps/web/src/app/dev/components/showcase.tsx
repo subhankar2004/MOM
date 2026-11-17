@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Bell, Clock, Phone, Plus, ShoppingBag } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { MenuItemRow, type MenuItemData } from '@/components/food/menu-item-row';
-import { StallCard, type StallCardData } from '@/components/food/stall-card';
+import { StallCard } from '@/components/food/stall-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CongestionMeter } from '@/components/ui/congestion-meter';
@@ -26,45 +26,58 @@ import { useToast } from '@/components/ui/toast';
 import { TokenTicket } from '@/components/ui/token-ticket';
 import { VegDot } from '@/components/ui/veg-dot';
 import { apiRequest, ApiError, API_URL } from '@/lib/api-client';
+import type { PublicStall } from '@/lib/stalls';
 
-const STALLS: StallCardData[] = [
-  {
+const SHOWCASE_NOW = new Date('2026-11-16T12:00:00+05:30');
+const sampleStall = (over: Partial<PublicStall>): PublicStall => ({
+  id: over.slug ?? 'x',
+  slug: 'x',
+  name: 'Stall',
+  description: null,
+  location: null,
+  photoUrl: null,
+  cuisineTags: [],
+  isVegOnly: false,
+  availability: { state: 'open', reason: 'hours', closesAt: null, nextOpensAt: null },
+  congestion: { level: 'low', waitMinutes: 8 },
+  payments: { upi: true, cash: true },
+  startingPricePaise: 3000,
+  dishes: [],
+  ...over,
+});
+const STALLS: PublicStall[] = [
+  sampleStall({
+    slug: 'dosa-corner',
     name: 'Dosa Corner',
     cuisineTags: ['South Indian', 'Breakfast'],
     location: 'Near Main Gate',
     isVegOnly: true,
-    open: true,
-    congestion: 'low',
-    waitMinutes: 8,
-    upi: true,
-    cash: true,
-    startingPricePaise: 3000,
-  },
-  {
+    availability: { state: 'open', reason: 'hours', closesAt: '2026-11-16T07:00:00Z', nextOpensAt: null },
+  }),
+  sampleStall({
+    slug: 'chowmein-junction',
     name: 'Chowmein Junction',
     cuisineTags: ['Chinese', 'Fast Food'],
     location: 'Hostel Road',
-    isVegOnly: false,
-    open: true,
-    congestion: 'busy',
-    waitMinutes: 24,
-    upi: false,
-    cash: true,
+    congestion: { level: 'busy', waitMinutes: 24 },
+    payments: { upi: false, cash: true },
     startingPricePaise: 5000,
-  },
-  {
+  }),
+  sampleStall({
+    slug: 'chai-and-rolls',
+    name: 'Chai & Rolls',
+    cuisineTags: ['Snacks', 'Beverages'],
+    location: 'Behind Academic Block',
+    availability: { state: 'paused', reason: 'paused', closesAt: null, nextOpensAt: null },
+  }),
+  sampleStall({
+    slug: 'odia-thali-ghar',
     name: 'Odia Thali Ghar',
     cuisineTags: ['Odia', 'Meals'],
     location: 'Opposite Library',
-    isVegOnly: false,
-    open: false,
-    opensLabel: 'Opens 7:00 PM',
-    congestion: 'low',
-    waitMinutes: 5,
-    upi: true,
-    cash: true,
+    availability: { state: 'closed', reason: 'hours', closesAt: null, nextOpensAt: '2026-11-16T13:30:00Z' },
     startingPricePaise: 2000,
-  },
+  }),
 ];
 
 const MENU: MenuItemData[] = [
@@ -249,7 +262,12 @@ export function Showcase() {
       <Section title="Stall cards">
         <div className="grid gap-3 sm:grid-cols-2">
           {STALLS.map((s) => (
-            <StallCard key={s.name} stall={s} />
+            <StallCard
+              key={s.slug}
+              stall={s}
+              now={SHOWCASE_NOW}
+              matchedDishes={s.slug === 'dosa-corner' ? ['Masala Dosa'] : []}
+            />
           ))}
         </div>
       </Section>

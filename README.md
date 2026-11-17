@@ -63,6 +63,10 @@ Next.js 16 (App Router, Turbopack) + Tailwind CSS 4 + TanStack Query. `npm run d
 
 Design tokens (colour, type, radii) are CSS variables in `src/app/globals.css`, with light and dark
 themes. `src/lib/api-client.ts` is the typed client for the API (errors become `ApiError`).
+**Home (#11):** stall cards (open → paused → closed, greyed with "Opens 7:30 AM" in IST), busy meter,
+"Closes in 20 min", payment methods and starting price; search by stall, cuisine or **dish**;
+"Open now" and "Pure veg" filters; refreshed every 30 s, pull-to-refresh and a refresh button.
+
 **Sign-in (#8):** `/login` (phone → 6-box code with paste/SMS autofill → name on first login).
 The API client renews the 15-minute session silently (one shared refresh for parallel requests);
 `/vendor` needs a stall role and `/admin` a super admin, others see `/no-access`. These guards are UX

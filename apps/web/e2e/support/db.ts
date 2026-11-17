@@ -32,6 +32,9 @@ export function resetTestUsers() {
       like,
     ]);
     await db.query(`delete from vendor_invites where phone like $1`, [like]);
+    // Stalls created by tests (slug e2e-…) and their orders
+    await db.query(`delete from orders where stall_id in (select id from stalls where slug like 'e2e-%')`);
+    await db.query(`delete from stalls where slug like 'e2e-%'`);
     await db.query(`delete from auth_otps where phone like $1`, [like]);
   });
 }
@@ -49,4 +52,71 @@ export function createUser(phone: string, name: string, role: 'student' | 'vendo
 
 export function setRole(phone: string, role: 'student' | 'vendor_owner' | 'super_admin') {
   return withDb((db) => db.query(`update users set role = $2 where phone = $1`, [phone, role]));
+}
+
+/** IST wall clock of now + `minutes` → { weekday 1–7, "HH:MM" }. */
+function istSlot(minutesFromNow: number) {
+  const ist = new Date(Date.now() + (minutesFromNow + 330) * 60_000);
+  const jsDay = ist.getUTCDay();
+  const hhmm = `${String(ist.getUTCHours()).padStart(2, '0')}:${String(ist.getUTCMinutes()).padStart(2, '0')}`;
+  return { weekday: jsDay === 0 ? 7 : jsDay, hhmm };
+}
+
+/**
+ * A stall for one test. `opensInMinutes` > 0 makes it closed now and opening later
+ * (a one-hour slot); `open: true` forces it open (vendor switch).
+ */
+export function createTestStall(
+  slug: string,
+  options: {
+    open?: boolean;
+    opensInMinutes?: number;
+    avgPrepMinutes?: number;
+    parallelCapacity?: number;
+  } = {},
+) {
+  return withDb(async (db) => {
+    const { rows } = await db.query<{ id: string }>(
+      `insert into stalls (slug, name, status, is_open_override, avg_prep_minutes, parallel_capacity, cuisine_tags)
+       values ($1, $2, 'active', $3, $4, $5, '{Test}') returning id`,
+      [
+        slug,
+        `Test ${slug.replace(/^e2e-/, '')}`,
+        options.open ? true : null,
+        options.avgPrepMinutes ?? 10,
+        options.parallelCapacity ?? 1,
+      ],
+    );
+    const id = rows[0]!.id;
+    if (options.opensInMinutes) {
+      const opens = istSlot(options.opensInMinutes);
+      const closes = istSlot(options.opensInMinutes + 60);
+      await db.query(
+        `insert into stall_hours (stall_id, weekday, opens_at, closes_at) values ($1, $2, $3, $4)`,
+        [id, opens.weekday, opens.hhmm, closes.hhmm],
+      );
+    }
+    return id;
+  });
+}
+
+/** Puts `count` orders in the stall's queue (status placed). */
+export function addActiveOrders(stallId: string, count: number) {
+  return withDb(async (db) => {
+    const { rows: u } = await db.query<{ id: string }>(
+      `select id from users where deleted_at is null limit 1`,
+    );
+    const { rows: st } = await db.query<{ id: number }>(
+      `select id from platform_settings order by id desc limit 1`,
+    );
+    for (let i = 1; i <= count; i++) {
+      await db.query(
+        `insert into orders (user_id, stall_id, token_day, token_no, pickup_code, status, payment_method, payment_status,
+           subtotal_paise, platform_fee_paise, cash_fee_paise, total_paise, platform_fee_bps, cash_fee_bps, settings_id,
+           idempotency_key)
+         values ($1, $2, current_date, $3, '1234', 'placed', 'cash', 'due', 10000, 100, 500, 10600, 100, 500, $4, $5)`,
+        [u[0]!.id, stallId, i, st[0]!.id, `e2e-${stallId}-${i}`],
+      );
+    }
+  });
 }

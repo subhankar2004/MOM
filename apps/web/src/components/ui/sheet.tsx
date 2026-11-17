@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { IconButton } from './icon-button';
 
 /**
@@ -20,6 +20,8 @@ export function Sheet({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // Unique per sheet: several sheets can be on one page.
+  const titleId = useId();
 
   useEffect(() => {
     const dialog = ref.current;
@@ -35,12 +37,12 @@ export function Sheet({
       onClick={(e) => {
         if (e.target === ref.current) onClose(); // click on the backdrop
       }}
-      aria-labelledby="sheet-title"
+      aria-labelledby={titleId}
       className="sheet m-0 mt-auto w-full max-w-none rounded-t-(--radius-sheet) bg-surface p-0 text-ink sm:m-auto sm:max-w-lg sm:rounded-(--radius-sheet)"
     >
       <div className="flex max-h-[85dvh] flex-col">
         <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
-          <h2 id="sheet-title" className="font-display text-xl font-bold">
+          <h2 id={titleId} className="font-display text-xl font-bold">
             {title}
           </h2>
           <IconButton label="Close" icon={<X size={20} aria-hidden />} onClick={onClose} />

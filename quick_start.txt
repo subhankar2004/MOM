@@ -24,6 +24,7 @@ Done so far:
   #10 each stall's open/closed status and how busy it is
   #11 the home page: every stall, open first, with search and filters
       (http://localhost:3000)
+  #12 each stall's menu: tap a stall → dishes by category, Add buttons
 Coming next:
   #4  database tables        #5  the API (server)      #6  the website
 This guide grows with every issue.

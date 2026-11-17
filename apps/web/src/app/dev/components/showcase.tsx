@@ -279,7 +279,7 @@ export function Showcase() {
               key={item.id}
               item={item}
               quantity={qty[item.id] ?? 0}
-              onQuantityChange={(n) => setQty((q) => ({ ...q, [item.id]: n }))}
+              onQuantityChange={(it, n) => setQty((q) => ({ ...q, [it.id]: n }))}
             />
           ))}
         </Card>

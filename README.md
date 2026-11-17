@@ -67,6 +67,11 @@ themes. `src/lib/api-client.ts` is the typed client for the API (errors become `
 "Closes in 20 min", payment methods and starting price; search by stall, cuisine or **dish**;
 "Open now" and "Pure veg" filters; refreshed every 30 s, pull-to-refresh and a refresh button.
 
+**Menu (#12):** `/stalls/:slug` — stall header (status, wait, closing time, payments), sticky
+category chips that follow the scroll, dish rows (photo, veg mark, price, Add / − +), a dish detail
+sheet, "Sold out" dishes that can't be added, and a banner when the stall is closed or paused. One
+stall per cart: adding from another stall asks first. A 50-dish menu is tested at 4× CPU slowdown.
+
 **Sign-in (#8):** `/login` (phone → 6-box code with paste/SMS autofill → name on first login).
 The API client renews the 15-minute session silently (one shared refresh for parallel requests);
 `/vendor` needs a stall role and `/admin` a super admin, others see `/no-access`. These guards are UX
@@ -89,6 +94,7 @@ Fastify 5 + Zod. `npm run dev` serves it on <http://localhost:4000>:
 | `POST /v1/auth/refresh`, `/logout`              | rotate / end the session                                                        |
 | `GET`, `PATCH`, `DELETE /v1/me`                 | the signed-in user (name; account deletion)                                     |
 | `GET /v1/stalls`, `/v1/stalls/:slug`            | public: stalls with open/paused/closed, wait time + busy level, payment methods |
+| `GET /v1/stalls/:slug/menu`                     | public: categories → dishes (sold-out flagged; deleted and empty hidden)        |
 | `GET /v1/vendor/stalls`, `/stalls/:stallId`     | stall console: my stalls (members) / all (super admin)                          |
 | `POST`, `GET /v1/admin/stalls/:stallId/members` | super admin: register a stall owner's phone, list members + pending             |
 | `POST /v1/admin/users/:userId/suspension`       | super admin: suspend (ends all sessions) or reactivate                          |

@@ -28,6 +28,24 @@ export const publicStallSchema = z.object({
 
 const hoursSchema = z.object({ weekday: z.number().int(), opensAt: z.string(), closesAt: z.string() });
 
+const slugParams = z.object({
+  slug: z
+    .string()
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'Not a valid stall name')
+    .max(80),
+});
+
+const menuItemSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  description: z.string().nullable(),
+  pricePaise: z.number().int(),
+  isVeg: z.boolean(),
+  imageUrl: z.string().nullable(),
+  /** false = sold out: shown, but can't be ordered. */
+  available: z.boolean(),
+});
+
 /** Public (no sign-in): GET /v1/stalls and /v1/stalls/:slug. */
 export const stallsRoutes: FastifyPluginAsyncZod<{ stalls: StallsService }> = async (app, { stalls }) => {
   // A CDN (CloudFront) may reuse the answer for 15 s (s-maxage), but browsers must always ask
@@ -55,15 +73,28 @@ export const stallsRoutes: FastifyPluginAsyncZod<{ stalls: StallsService }> = as
       schema: {
         tags: ['stalls'],
         summary: 'One stall, with its weekly opening hours',
-        params: z.object({
-          slug: z
-            .string()
-            .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'Not a valid stall name')
-            .max(80),
-        }),
+        params: slugParams,
         response: { 200: z.object({ stall: publicStallSchema.extend({ hours: z.array(hoursSchema) }) }) },
       },
     },
     async (req) => ({ stall: await stalls.getBySlug(req.params.slug) }),
+  );
+
+  app.get(
+    '/:slug/menu',
+    {
+      schema: {
+        tags: ['stalls'],
+        summary: "A stall's menu: categories with dishes (sold-out dishes flagged)",
+        params: slugParams,
+        response: {
+          200: z.object({
+            stall: publicStallSchema.extend({ hours: z.array(hoursSchema) }),
+            categories: z.array(z.object({ id: z.uuid(), name: z.string(), items: z.array(menuItemSchema) })),
+          }),
+        },
+      },
+    },
+    async (req) => stalls.menu(req.params.slug),
   );
 };

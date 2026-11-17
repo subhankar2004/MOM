@@ -27,6 +27,7 @@ async function checkPage(page: Page, path: string, theme: 'light' | 'dark', read
 const PUBLIC: Array<[string, RegExp]> = [
   ['/', /Stalls near you/],
   ['/login', /Sign in to order/],
+  ['/stalls/dosa-corner', /Dosa Corner/],
   ['/no-access', /No access/],
   ['/dev/components', /Design system/],
 ];

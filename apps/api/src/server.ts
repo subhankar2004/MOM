@@ -2,6 +2,7 @@
 import { buildApp } from './app.js';
 import { EnvValidationError, loadEnv } from './config/env.js';
 import { createDb } from './db/client.js';
+import { startJobs } from './jobs/index.js';
 
 let env;
 try {
@@ -23,7 +24,12 @@ app.addHook('onClose', async () => {
   await pool.end();
 });
 
-/** Graceful shutdown: stop accepting requests, finish in-flight ones, close the DB pool. */
+let stopJobs: (() => Promise<void>) | undefined;
+
+/**
+ * Graceful shutdown: stop taking jobs, stop accepting requests, finish in-flight ones,
+ * then close the DB pool (the onClose hook above).
+ */
 let shuttingDown = false;
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.once(signal, () => {
@@ -34,16 +40,19 @@ for (const signal of ['SIGTERM', 'SIGINT'] as const) {
       app.log.error('shutdown took longer than 10 s, exiting');
       process.exit(1);
     }, 10_000).unref();
-    app.close().then(
-      () => {
-        clearTimeout(force);
-        process.exit(0);
-      },
-      (err: unknown) => {
-        app.log.error({ err }, 'error during shutdown');
-        process.exit(1);
-      },
-    );
+    Promise.resolve(stopJobs?.())
+      .catch((err: unknown) => app.log.error({ err }, 'error stopping background jobs'))
+      .then(() => app.close())
+      .then(
+        () => {
+          clearTimeout(force);
+          process.exit(0);
+        },
+        (err: unknown) => {
+          app.log.error({ err }, 'error during shutdown');
+          process.exit(1);
+        },
+      );
   });
 }
 
@@ -54,3 +63,21 @@ try {
   await pool.end();
   process.exit(1);
 }
+
+/**
+ * Background jobs need the database. If it's unreachable at startup, keep the API up
+ * (/ready reports 503 meanwhile) and retry every 30 s, instead of exiting and letting the
+ * container restart in a loop during a database blip.
+ */
+async function startJobsWhenPossible(): Promise<void> {
+  while (!shuttingDown) {
+    try {
+      stopJobs = await startJobs(env!.DATABASE_URL, db, app.log);
+      return;
+    } catch (err) {
+      app.log.error({ err }, 'background jobs could not start; retrying in 30 s');
+      await new Promise((resolve) => setTimeout(resolve, 30_000).unref());
+    }
+  }
+}
+if (env.JOBS_ENABLED) void startJobsWhenPossible();

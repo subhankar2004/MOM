@@ -9,6 +9,8 @@ import { authRoutes } from './modules/auth/auth.routes.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import { adminAccessRoutes } from './modules/admin/members.routes.js';
 import { meRoutes } from './modules/auth/me.routes.js';
+import { stallsRoutes } from './modules/stalls/stalls.routes.js';
+import { StallsService } from './modules/stalls/stalls.service.js';
 import { vendorRoutes } from './modules/vendor/vendor.routes.js';
 import { registerAuth } from './plugins/auth.js';
 import { registerDocs } from './plugins/docs.js';
@@ -32,6 +34,10 @@ export interface BuildAppOptions {
   logger?: FastifyServerOptions['logger'];
   /** Override the SMS provider (tests capture messages). Defaults to SMS_PROVIDER. */
   sms?: SmsProvider;
+  /** Override the clock (tests). */
+  now?: () => Date;
+  /** Public stall list cache in ms (spec §10: 15 s). Tests pass 0. */
+  stallsCacheTtlMs?: number;
 }
 
 /** Accepts an incoming X-Request-Id only if it looks like an id (prevents log injection). */
@@ -60,7 +66,14 @@ export function loggerOptions(env: Pick<Env, 'LOG_LEVEL' | 'NODE_ENV'>): Fastify
  * Builds the API without starting it, so tests can call `app.inject()`.
  * server.ts adds the listening socket and graceful shutdown.
  */
-export async function buildApp({ env, db, logger, sms }: BuildAppOptions): Promise<FastifyInstance> {
+export async function buildApp({
+  env,
+  db,
+  logger,
+  sms,
+  now,
+  stallsCacheTtlMs,
+}: BuildAppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: logger ?? loggerOptions(env),
     // Behind the AWS load balancer the real client IP is in X-Forwarded-For (needed for rate limits).
@@ -127,6 +140,14 @@ export async function buildApp({ env, db, logger, sms }: BuildAppOptions): Promi
         ratePerMinute: env.AUTH_RATE_LIMIT_PER_MINUTE,
       });
       await v1.register(meRoutes, { prefix: '/me', auth: authService, cookies: cookieConfig });
+      await v1.register(stallsRoutes, {
+        prefix: '/stalls',
+        stalls: new StallsService(db, {
+          publicImageBaseUrl: env.PUBLIC_IMAGE_BASE_URL,
+          now,
+          cacheTtlMs: stallsCacheTtlMs,
+        }),
+      });
       await v1.register(vendorRoutes, { prefix: '/vendor' });
       await v1.register(adminAccessRoutes, { prefix: '/admin' });
     },

@@ -20,6 +20,7 @@ export async function registerDocs(app: FastifyInstance, version: string): Promi
         { name: 'ops', description: 'Health and readiness' },
         { name: 'auth', description: 'Phone OTP login and sessions (cookies)' },
         { name: 'me', description: 'The signed-in user' },
+        { name: 'stalls', description: 'Public stall directory (no sign-in)' },
         { name: 'vendor', description: 'Stall console (stall members and super admins)' },
         { name: 'admin', description: 'Super admin only; every change is audited' },
       ],

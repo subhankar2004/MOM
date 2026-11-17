@@ -1,0 +1,66 @@
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
+import type { StallsService } from './stalls.service.js';
+
+const availabilitySchema = z.object({
+  state: z.enum(['open', 'paused', 'closed']),
+  reason: z.enum(['hours', 'override', 'paused', 'inactive']),
+  closesAt: z.date().nullable(),
+  nextOpensAt: z.date().nullable(),
+});
+
+export const publicStallSchema = z.object({
+  id: z.uuid(),
+  slug: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  location: z.string().nullable(),
+  photoUrl: z.string().nullable(),
+  cuisineTags: z.array(z.string()),
+  isVegOnly: z.boolean(),
+  availability: availabilitySchema,
+  congestion: z.object({ level: z.enum(['low', 'moderate', 'busy']), waitMinutes: z.number().int() }),
+  payments: z.object({ upi: z.boolean(), cash: z.boolean() }),
+  startingPricePaise: z.number().int().nullable(),
+});
+
+const hoursSchema = z.object({ weekday: z.number().int(), opensAt: z.string(), closesAt: z.string() });
+
+/** Public (no sign-in): GET /v1/stalls and /v1/stalls/:slug. */
+export const stallsRoutes: FastifyPluginAsyncZod<{ stalls: StallsService }> = async (app, { stalls }) => {
+  // Shared caches (CloudFront, browsers) may reuse the answer briefly; it changes slowly.
+  app.addHook('onSend', async (_req, reply) => {
+    if (reply.statusCode === 200)
+      reply.header('cache-control', 'public, max-age=15, stale-while-revalidate=30');
+  });
+
+  app.get(
+    '/',
+    {
+      schema: {
+        tags: ['stalls'],
+        summary: 'All stalls with open/closed status, how busy they are and payment methods',
+        response: { 200: z.object({ stalls: z.array(publicStallSchema) }) },
+      },
+    },
+    async () => ({ stalls: await stalls.list() }),
+  );
+
+  app.get(
+    '/:slug',
+    {
+      schema: {
+        tags: ['stalls'],
+        summary: 'One stall, with its weekly opening hours',
+        params: z.object({
+          slug: z
+            .string()
+            .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'Not a valid stall name')
+            .max(80),
+        }),
+        response: { 200: z.object({ stall: publicStallSchema.extend({ hours: z.array(hoursSchema) }) }) },
+      },
+    },
+    async (req) => ({ stall: await stalls.getBySlug(req.params.slug) }),
+  );
+};

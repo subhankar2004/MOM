@@ -28,6 +28,7 @@ const PUBLIC: Array<[string, RegExp]> = [
   ['/', /Stalls near you/],
   ['/login', /Sign in to order/],
   ['/stalls/dosa-corner', /Dosa Corner/],
+  ['/cart', /Your cart is empty/],
   ['/no-access', /No access/],
   ['/dev/components', /Design system/],
 ];

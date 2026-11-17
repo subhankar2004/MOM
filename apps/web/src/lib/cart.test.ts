@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { cartStore, MAX_QUANTITY, quantityIn } from './cart';
+import { cartStore, cartTotals, MAX_QUANTITY, quantityIn } from './cart';
 
 const dosa = { id: 's1', slug: 'dosa-corner', name: 'Dosa Corner' };
 const chai = { id: 's2', slug: 'chai-and-rolls', name: 'Chai & Rolls' };
@@ -25,7 +25,7 @@ describe('cart store', () => {
   it('forgets the stall once the cart is empty', () => {
     cartStore.setQuantity(dosa, masala, 1);
     cartStore.setQuantity(dosa, masala, 0);
-    expect(cartStore.get()).toEqual({ stall: null, lines: [] });
+    expect(cartStore.get()).toEqual({ stall: null, lines: [], note: '' });
   });
 
   it('one stall per cart: adding from another stall is refused until replaced', () => {
@@ -53,5 +53,26 @@ describe('cart store', () => {
     off();
     cartStore.setQuantity(dosa, masala, 2);
     expect(calls).toBe(1);
+  });
+});
+
+describe('cart extras', () => {
+  it('removes a line, accepts new prices, keeps a note, totals', () => {
+    cartStore.setQuantity(dosa, masala, 2);
+    cartStore.setQuantity(dosa, idli, 1);
+    cartStore.setNote('Less spicy please');
+    cartStore.acceptPrices([{ itemId: 'i1', unitPricePaise: 6500 }]);
+    expect(cartTotals(cartStore.get())).toEqual({ items: 3, subtotalPaise: 2 * 6500 + 3000 });
+    expect(cartStore.get().note).toBe('Less spicy please');
+    cartStore.remove('i2');
+    expect(cartStore.get().lines.map((l) => l.itemId)).toEqual(['i1']);
+  });
+
+  it('notes are capped at 200 characters and cleared with the cart', () => {
+    cartStore.setQuantity(dosa, masala, 1);
+    cartStore.setNote('x'.repeat(250));
+    expect(cartStore.get().note).toHaveLength(200);
+    cartStore.remove('i1');
+    expect(cartStore.get()).toEqual({ stall: null, lines: [], note: '' });
   });
 });

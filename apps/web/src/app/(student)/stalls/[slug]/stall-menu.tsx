@@ -129,7 +129,7 @@ export function StallMenuView() {
       if (!stall) return;
       const result = cartStore.setQuantity(
         { id: stall.id, slug: stall.slug, name: stall.name },
-        { itemId: item.id, name: item.name, pricePaise: item.pricePaise },
+        { itemId: item.id, name: item.name, pricePaise: item.pricePaise, isVeg: item.isVeg },
         quantity,
       );
       if (result === 'other-stall') setPending({ item, quantity });
@@ -269,7 +269,12 @@ export function StallMenuView() {
                 if (pending && stall) {
                   cartStore.replaceWith(
                     { id: stall.id, slug: stall.slug, name: stall.name },
-                    { itemId: pending.item.id, name: pending.item.name, pricePaise: pending.item.pricePaise },
+                    {
+                      itemId: pending.item.id,
+                      name: pending.item.name,
+                      pricePaise: pending.item.pricePaise,
+                      isVeg: pending.item.isVeg,
+                    },
                     pending.quantity,
                   );
                 }

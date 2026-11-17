@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { AccountButton } from '@/components/auth/account-button';
 import { Logo } from '@/components/ui/logo';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { StudentNav } from './student-nav';
@@ -18,6 +19,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-1">
             <span className="hidden text-sm text-ink-muted sm:inline">VSSUT, Burla</span>
             <ThemeToggle />
+            <AccountButton />
           </div>
         </div>
       </header>

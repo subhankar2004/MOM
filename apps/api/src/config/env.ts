@@ -38,6 +38,8 @@ const envSchema = z
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
     /** Default per-IP request budget per minute. Sensitive routes set stricter limits. */
     RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(10).max(10_000).default(300),
+    /** Burst limit per IP per minute for requesting login codes (verify gets twice this). */
+    AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(10),
     /** Serve OpenAPI docs at /docs. Defaults to on, except in production. */
     API_DOCS: z.stringbool().optional(),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),

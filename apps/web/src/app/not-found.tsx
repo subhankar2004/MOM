@@ -6,6 +6,7 @@ export default function NotFound() {
   return (
     <main id="main" className="flex min-h-dvh items-center justify-center">
       <EmptyState
+        as="h1"
         icon={<SearchX size={40} aria-hidden />}
         title="This page doesn't exist"
         description="The link may be old or mistyped."

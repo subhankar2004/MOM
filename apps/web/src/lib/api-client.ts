@@ -30,10 +30,10 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
 }
 
 /**
- * Typed fetch for the MOM API: JSON in/out, cookies included (auth, #7),
- * timeout, and every failure turned into an ApiError with a readable message.
+ * One fetch to the MOM API: JSON in/out, cookies included (auth, #7), timeout, and every
+ * failure turned into an ApiError with a readable message. No session renewal (see apiRequest).
  */
-export async function apiRequest<T>(path: `/${string}`, options: RequestOptions = {}): Promise<T> {
+async function rawRequest<T>(path: `/${string}`, options: RequestOptions = {}): Promise<T> {
   const { body, idempotencyKey, timeoutMs = 15_000, headers, signal, ...init } = options;
   const timeout = AbortSignal.timeout(timeoutMs);
   let response: Response;
@@ -80,4 +80,50 @@ export async function apiRequest<T>(path: `/${string}`, options: RequestOptions 
     );
   }
   return data as T;
+}
+
+// --- Sessions ---------------------------------------------------------------------------
+
+type SessionListener = () => void;
+const sessionExpiredListeners = new Set<SessionListener>();
+
+/** Called when the session can't be renewed (signed out elsewhere, expired, suspended). */
+export function onSessionExpired(listener: SessionListener): () => void {
+  sessionExpiredListeners.add(listener);
+  return () => sessionExpiredListeners.delete(listener);
+}
+
+let refreshInFlight: Promise<boolean> | null = null;
+
+/**
+ * Renews the 15-minute access cookie using the refresh cookie. Parallel callers share one
+ * request, so ten requests failing at once cause one refresh, not ten.
+ */
+export function refreshSession(): Promise<boolean> {
+  refreshInFlight ??= rawRequest('/v1/auth/refresh', { method: 'POST' })
+    .then(() => true)
+    .catch(() => false)
+    .finally(() => {
+      refreshInFlight = null;
+    });
+  return refreshInFlight;
+}
+
+/**
+ * Typed request to the MOM API. If the access token has expired (401), the session is
+ * renewed silently and the request retried once; if that fails, listeners are told the
+ * session ended and the original error is thrown.
+ */
+export async function apiRequest<T>(path: `/${string}`, options: RequestOptions = {}): Promise<T> {
+  try {
+    return await rawRequest<T>(path, options);
+  } catch (err) {
+    const isAuthRoute = path.startsWith('/v1/auth/');
+    if (!(err instanceof ApiError) || err.status !== 401 || isAuthRoute) throw err;
+    if (!(await refreshSession())) {
+      sessionExpiredListeners.forEach((listener) => listener());
+      throw err;
+    }
+    return rawRequest<T>(path, options);
+  }
 }

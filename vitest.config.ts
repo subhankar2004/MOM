@@ -18,6 +18,13 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'web',
+          root: 'apps/web',
+          include: ['src/**/*.test.ts'],
+        },
+      },
+      {
+        test: {
           name: 'api',
           root: 'apps/api',
           include: ['src/**/*.test.ts'],

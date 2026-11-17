@@ -117,7 +117,12 @@ export async function buildApp({ env, db, logger, sms }: BuildAppOptions): Promi
   // Versioned business API.
   await app.register(
     async (v1) => {
-      await v1.register(authRoutes, { prefix: '/auth', auth: authService, cookies: cookieConfig });
+      await v1.register(authRoutes, {
+        prefix: '/auth',
+        auth: authService,
+        cookies: cookieConfig,
+        ratePerMinute: env.AUTH_RATE_LIMIT_PER_MINUTE,
+      });
       await v1.register(meRoutes, { prefix: '/me', auth: authService, cookies: cookieConfig });
     },
     { prefix: '/v1' },

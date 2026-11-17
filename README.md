@@ -63,8 +63,14 @@ Next.js 16 (App Router, Turbopack) + Tailwind CSS 4 + TanStack Query. `npm run d
 
 Design tokens (colour, type, radii) are CSS variables in `src/app/globals.css`, with light and dark
 themes. `src/lib/api-client.ts` is the typed client for the API (errors become `ApiError`).
-Browser tests: `npm run build -w @mom/web && npm run test:e2e -w @mom/web` (axe WCAG 2.1 AA checks,
-no sideways scroll at 360 px, keyboard interactions) — they also run in CI.
+**Sign-in (#8):** `/login` (phone → 6-box code with paste/SMS autofill → name on first login).
+The API client renews the 15-minute session silently (one shared refresh for parallel requests);
+`/vendor` needs a stall role and `/admin` a super admin, others see `/no-access`. These guards are UX
+only — the API enforces access on every request.
+
+Browser tests: `npm run e2e -w @mom/web` builds the app, starts the real API against `mom_test`
+(needs `npm run db:up`) and runs Playwright: real sign-ins with fixed test codes, role redirects,
+silent refresh, axe WCAG 2.1 AA checks in both themes, no sideways scroll at 360 px. Also in CI.
 
 ### API (`apps/api`)
 

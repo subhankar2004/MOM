@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { IconButton } from '@/components/ui/icon-button';
+import { SignOutButton } from '@/components/auth/sign-out-button';
 import { Logo } from '@/components/ui/logo';
 import { Sheet } from '@/components/ui/sheet';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -56,7 +57,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <Logo />
           </div>
           <span className="hidden font-semibold text-ink-muted lg:inline">MOM super admin</span>
-          <ThemeToggle />
+          <div className="flex items-center">
+            <ThemeToggle />
+            <SignOutButton />
+          </div>
         </header>
         <main id="main" className="mx-auto w-full max-w-6xl px-4 py-6">
           {children}

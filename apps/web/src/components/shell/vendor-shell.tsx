@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { SignOutButton } from '@/components/auth/sign-out-button';
 import { Logo } from '@/components/ui/logo';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { SkipLink } from './skip-link';
@@ -17,7 +18,10 @@ export function VendorShell({ children }: { children: ReactNode }) {
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-border bg-surface/95 px-4 backdrop-blur">
           <StallSwitcher />
-          <ThemeToggle />
+          <div className="flex items-center">
+            <ThemeToggle />
+            <SignOutButton />
+          </div>
         </header>
         <main id="main" className="mx-auto w-full max-w-6xl px-4 pt-4 pb-24 md:pb-8">
           {children}

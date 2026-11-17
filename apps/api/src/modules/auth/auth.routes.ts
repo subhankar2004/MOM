@@ -8,6 +8,8 @@ import { clearAuthCookies, REFRESH_COOKIE, setAuthCookies, type CookieConfig } f
 export interface AuthRoutesOptions {
   auth: AuthService;
   cookies: CookieConfig;
+  /** Login-code requests per IP per minute (verify allows twice as many). */
+  ratePerMinute?: number;
 }
 
 const phoneField = z
@@ -38,7 +40,10 @@ const sessionResponse = z.object({
 });
 
 /** POST /v1/auth/... — phone OTP login, token refresh and logout. */
-export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, { auth, cookies }) => {
+export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (
+  app,
+  { auth, cookies, ratePerMinute = 10 },
+) => {
   const meta = (req: { ip: string; headers: { 'user-agent'?: string } }) => ({
     ip: req.ip,
     userAgent: req.headers['user-agent'],
@@ -48,7 +53,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
     '/otp/request',
     {
       // Per-IP burst limit on top of the per-phone/per-IP hourly limits in AuthService.
-      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      config: { rateLimit: { max: ratePerMinute, timeWindow: '1 minute' } },
       schema: {
         tags: ['auth'],
         summary: 'Send a login code by SMS',
@@ -64,7 +69,7 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (app, 
   app.post(
     '/otp/verify',
     {
-      config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+      config: { rateLimit: { max: ratePerMinute * 2, timeWindow: '1 minute' } },
       schema: {
         tags: ['auth'],
         summary: 'Check the code and sign in (sets session cookies)',

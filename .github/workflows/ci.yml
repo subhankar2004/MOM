@@ -120,6 +120,22 @@ jobs:
     # Turned on in #6 (planned for #11): the design system and app shell already have pages to test.
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # The tests sign in through the real API, so they need Postgres (the API itself is
+    # started by Playwright, see apps/web/playwright.config.ts).
+    services:
+      postgres:
+        image: postgres:17.12-alpine
+        env:
+          POSTGRES_USER: mom
+          POSTGRES_PASSWORD: mom
+          POSTGRES_DB: mom_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mom -d mom_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -129,12 +145,8 @@ jobs:
       - run: npm ci
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: Build the web app (with the component showcase)
-        run: npm run build -w @mom/web
-        env:
-          SHOW_DEV_PAGES: '1'
-      - name: Accessibility, layout and interaction tests
-        run: npm run test:e2e -w @mom/web
+      - name: Build the web app, start the API, run the browser tests
+        run: npm run e2e -w @mom/web
       - if: failure()
         uses: actions/upload-artifact@v7
         with:

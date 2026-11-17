@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
+import { STORAGE } from './support/env';
 
 test.describe('student shell', () => {
+  test.use({ storageState: STORAGE.student });
+
   test('bottom tabs navigate and mark the current page', async ({ page, isMobile }) => {
     test.skip(!isMobile, 'bottom tab bar is the phone navigation');
     await page.goto('/');
@@ -43,7 +46,9 @@ test.describe('theme', () => {
   });
 });
 
-test.describe('consoles', () => {
+test.describe('stall console', () => {
+  test.use({ storageState: STORAGE.vendor });
+
   test('vendor console shows the stall switcher and its navigation', async ({ page, isMobile }) => {
     await page.goto('/vendor');
     await expect(page.getByRole('combobox', { name: 'Stall' })).toBeVisible();
@@ -54,6 +59,10 @@ test.describe('consoles', () => {
     if (!isMobile)
       await expect(nav.getByRole('link', { name: 'Menu' })).toHaveAttribute('aria-current', 'page');
   });
+});
+
+test.describe('admin console', () => {
+  test.use({ storageState: STORAGE.admin });
 
   test('admin menu opens as a sheet on phones and closes with Escape', async ({ page, isMobile }) => {
     test.skip(!isMobile, 'desktop shows a permanent sidebar');

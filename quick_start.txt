@@ -20,6 +20,7 @@ Done so far:
       students, stall owners (/vendor) and admin (/admin)
   #7  login with a phone number + 6-digit code (server side)
   #8  the login screen, staying signed in, and who can open which area
+  #9  stall owners: registered by phone, and each sees only their stall
 Coming next:
   #4  database tables        #5  the API (server)      #6  the website
 This guide grows with every issue.
@@ -88,6 +89,12 @@ PART 2 — EVERY DAY: STARTING
    copy the 6-digit code from this Terminal into the boxes.
    Your number is in SUPER_ADMIN_PHONES (apps/api/.env), so you land
    on the admin area (/admin). Any other number becomes a student.
+
+   Make a number a STALL OWNER (until the admin screens arrive in #23):
+   API docs http://localhost:4000/docs (signed in as you, the admin) →
+   "vendor" → GET /v1/vendor/stalls → copy a stall's "id" → "admin" →
+   POST /v1/admin/stalls/{stallId}/members with {"phone": "98765 43210"}.
+   That number signs in at /login and lands on its stall console.
 
 
 PART 3 — CLOSING FOR THE DAY

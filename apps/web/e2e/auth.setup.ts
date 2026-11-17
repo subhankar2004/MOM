@@ -1,50 +1,67 @@
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { request, test as setup } from '@playwright/test';
-import { resetTestUsers, setRole } from './support/db';
-import { API_URL, E2E_DATABASE_URL, PHONES, STORAGE, TEST_CODE, WEB_URL } from './support/env';
+import { request, test as setup, type APIResponse } from '@playwright/test';
+import { resetTestUsers } from './support/db';
+import { API_URL, apiEnv, PHONES, STORAGE, TEST_CODE, WEB_URL } from './support/env';
 
 /**
- * Runs once before the browser tests: migrates the test database, removes old test
- * accounts, and signs in one student, one stall owner and one admin through the real
- * API, saving their cookies for the tests to reuse.
+ * Runs once before the browser tests: migrates and seeds the test database, retires old
+ * test accounts, and signs in an admin, a stall owner and a student through the real API
+ * — exercising the super-admin bootstrap and stall-owner pre-registration on the way —
+ * saving their cookies for the tests to reuse.
  */
 setup('database and signed-in users', async () => {
-  execSync('npm run db:migrate -w @mom/api', {
-    cwd: '../..',
-    env: { ...process.env, DATABASE_URL: E2E_DATABASE_URL },
-    stdio: 'pipe',
-  });
+  const env = { ...process.env, ...apiEnv() };
+  execSync('npm run db:migrate -w @mom/api', { cwd: '../..', env, stdio: 'pipe' });
+  execSync('npm run db:seed -w @mom/api', { cwd: '../..', env, stdio: 'pipe' }); // demo stalls
   await resetTestUsers();
   mkdirSync('e2e/.auth', { recursive: true });
 
-  const people = [
-    { phone: PHONES.student, name: 'Test Student', role: 'student', file: STORAGE.student },
-    { phone: PHONES.vendor, name: 'Test Vendor', role: 'vendor_owner', file: STORAGE.vendor },
-    { phone: PHONES.admin, name: 'Test Admin', role: 'super_admin', file: STORAGE.admin },
-  ] as const;
-
-  for (const p of people) {
+  async function signIn(phone: string, name: string, file: string) {
     const api = await request.newContext({ baseURL: API_URL, extraHTTPHeaders: { origin: WEB_URL } });
-    const ok = async (res: Awaited<ReturnType<typeof api.post>>) => {
-      if (!res.ok()) throw new Error(`${res.url()} → ${res.status()} ${await res.text()}`);
-    };
-    await ok(await api.post('/v1/auth/otp/request', { data: { phone: p.phone } }));
-    await ok(await api.post('/v1/auth/otp/verify', { data: { phone: p.phone, code: TEST_CODE } }));
-    await ok(await api.patch('/v1/me', { data: { name: p.name } }));
-    if (p.role !== 'student') {
-      await setRole(p.phone, p.role);
-      await ok(await api.post('/v1/auth/refresh')); // new access token carrying the new role
-    }
+    await ok(await api.post('/v1/auth/otp/request', { data: { phone } }));
+    const verified = await api.post('/v1/auth/otp/verify', { data: { phone, code: TEST_CODE } });
+    await ok(verified);
+    await ok(await api.patch('/v1/me', { data: { name } }));
     // Cookies come from the API; the web app also keeps a "has signed in" hint in localStorage.
     const state = await api.storageState();
     writeFileSync(
-      p.file,
+      file,
       JSON.stringify({
         ...state,
         origins: [{ origin: WEB_URL, localStorage: [{ name: 'mom.session', value: '1' }] }],
       }),
     );
-    await api.dispose();
+    return { api, role: (await verified.json()).user.role as string };
   }
+
+  // 1. The admin's number is in SUPER_ADMIN_PHONES: signing in makes them super admin.
+  const admin = await signIn(PHONES.admin, 'Test Admin', STORAGE.admin);
+  if (admin.role !== 'super_admin') throw new Error(`admin bootstrap failed: role ${admin.role}`);
+
+  // 2. The admin registers the vendor's number for two demo stalls (pre-registration).
+  const stalls = (await (await admin.api.get('/v1/vendor/stalls')).json()).stalls as Array<{
+    id: string;
+    slug: string;
+  }>;
+  for (const slug of ['dosa-corner', 'chai-and-rolls']) {
+    const stall = stalls.find((s) => s.slug === slug);
+    if (!stall) throw new Error(`demo stall ${slug} missing`);
+    await ok(
+      await admin.api.post(`/v1/admin/stalls/${stall.id}/members`, { data: { phone: PHONES.vendor } }),
+    );
+  }
+
+  // 3. The vendor signs in for the first time and becomes vendor_owner automatically.
+  const vendor = await signIn(PHONES.vendor, 'Test Vendor', STORAGE.vendor);
+  if (vendor.role !== 'vendor_owner') throw new Error(`pre-registration failed: role ${vendor.role}`);
+
+  const student = await signIn(PHONES.student, 'Test Student', STORAGE.student);
+  if (student.role !== 'student') throw new Error(`student role ${student.role}`);
+
+  await Promise.all([admin.api.dispose(), vendor.api.dispose(), student.api.dispose()]);
 });
+
+async function ok(res: APIResponse) {
+  if (!res.ok()) throw new Error(`${res.url()} → ${res.status()} ${await res.text()}`);
+}

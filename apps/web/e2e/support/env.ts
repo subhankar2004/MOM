@@ -50,6 +50,8 @@ export function apiEnv(): Record<string, string> {
     OTP_PEPPER: 'e2e-only-otp-pepper-9876543210-abcdefghij',
     SMS_TEST_PHONES: Object.values(PHONES).join(','),
     SMS_TEST_CODE: TEST_CODE,
+    // The admin becomes super admin by signing in (bootstrap rule, #9).
+    SUPER_ADMIN_PHONES: PHONES.admin,
     // Many sign-ins from one machine in a few seconds.
     AUTH_RATE_LIMIT_PER_MINUTE: '500',
     RATE_LIMIT_PER_MINUTE: '5000',

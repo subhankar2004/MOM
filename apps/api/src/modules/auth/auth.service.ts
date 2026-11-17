@@ -4,6 +4,7 @@ import type { Db } from '../../db/client.js';
 import { authOtps, refreshTokens, users } from '../../db/schema/index.js';
 import { AppError } from '../../lib/errors.js';
 import type { SmsProvider } from '../../sms/index.js';
+import { applyAccessOnSignIn } from '../access/access.service.js';
 import { generateOtp, hashOtp, otpMatches, otpMessage } from './otp.js';
 import { hashRefreshToken, newRefreshToken, signAccessToken, type Role } from './tokens.js';
 
@@ -26,6 +27,8 @@ export interface AuthConfig {
   /** Phones that receive `testCode` instead of an SMS (never in production — enforced by env.ts). */
   testPhones: string[];
   testCode?: string;
+  /** SUPER_ADMIN_PHONES: these accounts are promoted to super admin when they sign in. */
+  superAdminPhones: string[];
 }
 
 export interface ClientMeta {
@@ -208,8 +211,10 @@ export class AuthService {
         this.log.info({ userId: user!.id }, 'new account created');
       }
       if (user!.status === 'suspended') throw suspended();
+      // Bootstrap super admins and turn pending stall invites into memberships (#9).
+      user = await applyAccessOnSignIn(tx, user!, this.config.superAdminPhones);
 
-      const session = await this.startSession(tx, toPublicUser(user!), randomUUID(), meta);
+      const session = await this.startSession(tx, toPublicUser(user), randomUUID(), meta);
       return { session, isNewUser: isNewUser || !user!.name };
     });
   }

@@ -61,6 +61,21 @@ test.describe('stall console', () => {
   });
 });
 
+test.describe('stall switcher', () => {
+  test.use({ storageState: STORAGE.vendor });
+
+  test('lists only the stalls this owner was registered for, and remembers the choice', async ({ page }) => {
+    await page.goto('/vendor');
+    const picker = page.getByRole('combobox', { name: 'Stall' });
+    await expect(picker.getByRole('option')).toHaveText(['Chai & Rolls', 'Dosa Corner']);
+    await picker.selectOption({ label: 'Dosa Corner' });
+    await page.reload();
+    await expect(page.getByRole('combobox', { name: 'Stall' })).toHaveValue(
+      (await page.getByRole('option', { name: 'Dosa Corner' }).getAttribute('value')) as string,
+    );
+  });
+});
+
 test.describe('admin console', () => {
   test.use({ storageState: STORAGE.admin });
 

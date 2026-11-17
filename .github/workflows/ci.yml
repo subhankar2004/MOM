@@ -114,9 +114,7 @@ jobs:
 
   e2e:
     name: End-to-end tests (Playwright)
-    # Switched on in issue #11, once the web app has pages to test.
-    if: ${{ false }}
-    needs: [quality]
+    # Turned on in #6 (planned for #11): the design system and app shell already have pages to test.
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -126,8 +124,14 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Build the web app (with the component showcase)
+        run: npm run build -w @mom/web
+        env:
+          SHOW_DEV_PAGES: '1'
+      - name: Accessibility, layout and interaction tests
+        run: npm run test:e2e -w @mom/web
       - if: failure()
         uses: actions/upload-artifact@v7
         with:

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calcFees, DEFAULT_FEE_RATES, feeFromBps, formatBps, formatINR, MAX_PAISE, paise } from './money.js';
+import { calcFees, DEFAULT_FEE_RATES, feeFromBps, formatBps, formatINR, MAX_PAISE, paise } from './money.ts';
 
 describe('calcFees — spec §4.1 examples', () => {
   it('₹130 by UPI → ₹131.30 (1% platform fee only)', () => {

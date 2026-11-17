@@ -19,3 +19,8 @@ cdk.out/
 *.log
 .vscode/*
 !.vscode/extensions.json
+
+# Next.js / Playwright
+next-env.d.ts
+playwright-report/
+test-results/

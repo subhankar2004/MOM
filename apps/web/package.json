@@ -4,6 +4,28 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json"
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "typecheck": "next typegen && tsc -p tsconfig.json",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@mom/shared": "*",
+    "@tanstack/react-query": "^5.107.1",
+    "lucide-react": "^1.73.0",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.65.1",
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint-config-next": "^16.4.6",
+    "tailwindcss": "^4.3.5"
   }
 }

@@ -38,7 +38,10 @@ export interface TestApp {
  *   const t = await createTestApp();
  *   afterEach(() => t.close());
  */
-export async function createTestApp(envOverrides: Record<string, string> = {}): Promise<TestApp> {
+export async function createTestApp(
+  envOverrides: Record<string, string> = {},
+  options: { now?: () => Date } = {},
+): Promise<TestApp> {
   const { db, pool } = createDb(testDatabaseUrl(), { max: 1, applicationName: 'mom-test' });
 
   let endTest!: () => void;
@@ -67,7 +70,14 @@ export async function createTestApp(envOverrides: Record<string, string> = {}): 
       sms.push(message);
     },
   };
-  const app = await buildApp({ env: testEnv(envOverrides), db: tx, logger: false, sms: captureSms });
+  const app = await buildApp({
+    env: testEnv(envOverrides),
+    db: tx,
+    logger: false,
+    sms: captureSms,
+    now: options.now,
+    stallsCacheTtlMs: 0,
+  });
   await app.ready();
 
   return {

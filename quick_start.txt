@@ -21,6 +21,8 @@ Done so far:
   #7  login with a phone number + 6-digit code (server side)
   #8  the login screen, staying signed in, and who can open which area
   #9  stall owners: registered by phone, and each sees only their stall
+  #10 each stall's open/closed status and how busy it is
+      (see it: http://localhost:4000/v1/stalls)
 Coming next:
   #4  database tables        #5  the API (server)      #6  the website
 This guide grows with every issue.

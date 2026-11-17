@@ -76,17 +76,18 @@ silent refresh, axe WCAG 2.1 AA checks in both themes, no sideways scroll at 360
 
 Fastify 5 + Zod. `npm run dev` serves it on <http://localhost:4000>:
 
-| Path                                            | Purpose                                                                |
-| ----------------------------------------------- | ---------------------------------------------------------------------- |
-| `GET /health`                                   | liveness (process is up)                                               |
-| `GET /ready`                                    | readiness: 200 if Postgres answers, 503 if not (load balancer uses it) |
-| `/docs`                                         | interactive OpenAPI docs (not served in production)                    |
-| `POST /v1/auth/otp/request`, `/otp/verify`      | phone OTP login (sets httpOnly session cookies)                        |
-| `POST /v1/auth/refresh`, `/logout`              | rotate / end the session                                               |
-| `GET`, `PATCH`, `DELETE /v1/me`                 | the signed-in user (name; account deletion)                            |
-| `GET /v1/vendor/stalls`, `/stalls/:stallId`     | stall console: my stalls (members) / all (super admin)                 |
-| `POST`, `GET /v1/admin/stalls/:stallId/members` | super admin: register a stall owner's phone, list members + pending    |
-| `POST /v1/admin/users/:userId/suspension`       | super admin: suspend (ends all sessions) or reactivate                 |
+| Path                                            | Purpose                                                                         |
+| ----------------------------------------------- | ------------------------------------------------------------------------------- |
+| `GET /health`                                   | liveness (process is up)                                                        |
+| `GET /ready`                                    | readiness: 200 if Postgres answers, 503 if not (load balancer uses it)          |
+| `/docs`                                         | interactive OpenAPI docs (not served in production)                             |
+| `POST /v1/auth/otp/request`, `/otp/verify`      | phone OTP login (sets httpOnly session cookies)                                 |
+| `POST /v1/auth/refresh`, `/logout`              | rotate / end the session                                                        |
+| `GET`, `PATCH`, `DELETE /v1/me`                 | the signed-in user (name; account deletion)                                     |
+| `GET /v1/stalls`, `/v1/stalls/:slug`            | public: stalls with open/paused/closed, wait time + busy level, payment methods |
+| `GET /v1/vendor/stalls`, `/stalls/:stallId`     | stall console: my stalls (members) / all (super admin)                          |
+| `POST`, `GET /v1/admin/stalls/:stallId/members` | super admin: register a stall owner's phone, list members + pending             |
+| `POST /v1/admin/users/:userId/suspension`       | super admin: suspend (ends all sessions) or reactivate                          |
 
 **Login (#7):** 6-digit SMS codes stored only as HMAC hashes, valid 5 min, 5 tries, 30 s resend
 cooldown, 5 codes per phone and 30 per IP per hour. Sessions: 15-min JWT access cookie + 30-day
@@ -99,6 +100,13 @@ membership in the database on every request (403 for any stall you don't manage 
 Stall owners are pre-registered by phone: existing accounts get access at once, new ones on first
 sign-in. `SUPER_ADMIN_PHONES` are promoted at sign-in. Every admin change goes to the append-only
 audit log. An authorization matrix test covers 5 kinds of caller × 6 endpoints.
+
+**Stall status (#10):** open/closed comes from weekly hours in IST (several slots a day, slots past
+midnight), the vendor's "Open now/Close now" switch (reset at midnight by a pg-boss job) and the
+"pause orders" switch. Wait = ceil((active orders + 1) / capacity) × prep time; Low/Moderate/Busy
+thresholds come from platform settings. The public list is cached for 15 s. Background jobs run on
+pg-boss (queue in Postgres, `JOBS_ENABLED`); if the database is down at startup the API stays up and
+retries.
 
 Errors always look like `{ "error": { "code", "message", "details?" }, "requestId" }`.
 Security headers, CORS (only `WEB_ORIGIN`) and per-IP rate limits apply to every route.

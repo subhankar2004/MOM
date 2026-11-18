@@ -72,6 +72,13 @@ category chips that follow the scroll, dish rows (photo, veg mark, price, Add / 
 sheet, "Sold out" dishes that can't be added, and a banner when the stall is closed or paused. One
 stall per cart: adding from another stall asks first. A 50-dish menu is tested at 4× CPU slowdown.
 
+**Sales & dues (#22):** `/vendor/sales` (owners only): Today / Last 7 days / This month. Sales, UPI
+and cash (orders handed over in the period, from the orders), MOM's fees, the cash fees the stall
+owes MOM and the UPI payouts. Fees, refunds, settlements and dues come **only from the ledger** (an
+integration test checks the report equals the ledger sums for the period). Daily stacked bar chart
+(UPI vs cash; validated colour pair, tooltip, table view) and a CSV download (one row per day plus a
+total). Received Route transfers show once #26 records them.
+
 **Pickup counter (#21):** `/vendor/scan` (owners and counter staff). The camera reads the
 student's QR with the browser's own `BarcodeDetector` where there is one, otherwise jsQR (loaded only
 then, e.g. iPhone Safari); torch toggle, beep and vibration. No QR? Type the token, then the 4-digit
@@ -183,6 +190,7 @@ Fastify 5 + Zod. `npm run dev` serves it on <http://localhost:4000>:
 | `GET /v1/vendor/stalls/:stallId/menu`; `POST /categories`, `PATCH`/`DELETE /categories/:id`, `PUT /categories/order`                | stall owner: the menu editor; categories (delete only when empty; reorder sends every id)                                                     |
 | `POST /v1/vendor/stalls/:stallId/items`, `PATCH`/`DELETE /items/:id`, `PUT /categories/:id/items/order`, `POST /items/availability` | stall owner: dishes (price changes audited; soft delete); bulk available / sold out                                                           |
 | `POST /v1/vendor/stalls/:stallId/pickup/verify`; `POST /orders/:orderId/handover`                                                   | stall (owner or staff): check a QR or token + pickup code (changes nothing); hand over (cash: `cashReceived: true` → paid_cash + ledger fees) |
+| `GET /v1/vendor/stalls/:stallId/reports?from=&to=`                                                                                  | stall owner: sales & dues for India dates (default today, at most 3 months); money from the ledger                                            |
 | `GET`, `PATCH /v1/vendor/stalls/:stallId/settings`; `PUT /hours`                                                                    | stall owner: open/close/pause, payment methods, prep time, capacity, photo, details; replace weekly hours (all audited)                       |
 | `POST /v1/vendor/stalls/:stallId/uploads/presign`                                                                                   | stall owner: a 5-minute signed PUT into the stall's photo folder (WebP/JPEG/PNG, ≤ 2 MB); `purpose: cover` for the stall photo                |
 | `GET /v1/vendor/stalls`, `/stalls/:stallId`                                                                                         | stall console: my stalls (members) / all (super admin)                                                                                        |

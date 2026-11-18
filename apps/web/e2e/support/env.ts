@@ -57,6 +57,11 @@ export const PHONES = {
   scanVendorDesktop: phone(59),
   scanPhone360: phone(60),
   scanDesktop: phone(61),
+  // sales report tests: the stall owner and a student
+  salesVendor360: phone(62),
+  salesVendorDesktop: phone(63),
+  salesPhone360: phone(64),
+  salesDesktop: phone(65),
 } as const;
 
 export const STORAGE = {

@@ -40,6 +40,11 @@ const envSchema = z
     RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(10).max(10_000).default(300),
     /** Burst limit per IP per minute for requesting login codes (verify gets twice this). */
     AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(1000).default(10),
+    /**
+     * Sign-in codes one IP address may request per hour. Campus Wi-Fi puts many students behind
+     * one public IP, so set this with the real network in mind before launch (#28).
+     */
+    OTP_MAX_PER_IP_PER_HOUR: z.coerce.number().int().min(1).max(100_000).default(30),
     /** How long the public stall list is reused, in seconds (spec §10: 15). 0 = always fresh. */
     PUBLIC_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).max(300).default(15),
     /** Run background jobs (pg-boss) in this process. */

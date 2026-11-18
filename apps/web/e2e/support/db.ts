@@ -32,6 +32,8 @@ export function resetTestUsers() {
       like,
     ]);
     await db.query(`delete from vendor_invites where phone like $1`, [like]);
+    // Fresh OTP history, so re-running the suite within an hour doesn't hit the per-number limit.
+    await db.query(`delete from auth_otps where phone like $1`, [like]);
     // Stalls created by tests (slug e2e-…) and their orders. Orders with money history
     // (ledger, append-only by design) can't be deleted: their stall is retired instead —
     // suspended (hidden from students) and renamed so the next run can reuse the slug.

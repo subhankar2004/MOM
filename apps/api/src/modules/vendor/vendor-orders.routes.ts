@@ -4,6 +4,7 @@ import { requireRole, requireStallAccess } from '../../plugins/authz.js';
 import { openEventStream } from '../../plugins/sse.js';
 import type { EventHub } from '../events/event-hub.js';
 import type { PaymentGateway } from '../payments/gateway.js';
+import { handOver, verifyPickup } from './pickup.service.js';
 import {
   boardOrder as getBoardOrder,
   moveOrder,
@@ -45,6 +46,8 @@ export interface VendorOrdersOptions {
   now?: () => Date;
   events: EventHub;
   gateway: PaymentGateway | null;
+  /** Verifies pickup QR codes (the same secret that signs them). */
+  qrSecret: string;
 }
 
 /** /v1/vendor/stalls/:stallId/orders — the live order board (spec §6.2 V1). */
@@ -146,4 +149,88 @@ export const vendorOrdersRoutes: FastifyPluginAsyncZod<VendorOrdersOptions> = as
   action('accept', 'Accept an order and start preparing it');
   action('ready', 'Mark an order ready for pickup (the student is told at once)');
   action('reject', 'Reject an order with a reason (paid UPI orders are refunded in full)');
+
+  // Rate-limited per person: the manual check is token + a 4-digit code, so guessing must be slow.
+  const perUser = (max: number) => ({
+    rateLimit: {
+      max,
+      timeWindow: '1 minute',
+      hook: 'preHandler' as const,
+      keyGenerator: (req: { auth?: { userId: string } | null; ip: string }) =>
+        req.auth ? `user:${req.auth.userId}` : `ip:${req.ip}`,
+    },
+  });
+
+  app.post(
+    '/stalls/:stallId/pickup/verify',
+    {
+      preHandler: stallAccess,
+      config: perUser(60),
+      schema: {
+        tags: ['vendor'],
+        summary:
+          'Check an order at the counter: scanned QR, or token + 4-digit pickup code (changes nothing)',
+        params,
+        body: z.union([
+          z.object({ qr: z.string().trim().min(1).max(200) }),
+          z.object({
+            tokenNo: z.number().int().min(1).max(9999),
+            pickupCode: z.string().regex(/^\d{4}$/, 'The pickup code is 4 digits'),
+          }),
+        ]),
+        response: {
+          200: z.discriminatedUnion('valid', [
+            z.object({
+              valid: z.literal(true),
+              order: boardOrder,
+              warning: z.enum(['not_ready']).nullable(),
+              cashDuePaise: z.number().int(),
+            }),
+            z.object({
+              valid: z.literal(false),
+              reason: z.enum(['unknown', 'wrong_stall', 'already_collected', 'not_paid', 'cancelled']),
+              message: z.string(),
+              order: boardOrder.nullable(),
+            }),
+          ]),
+        },
+      },
+    },
+    async (req) => {
+      const result = await verifyPickup(app.db, {
+        ...req.body,
+        stallId: req.params.stallId,
+        qrSecret: opts.qrSecret,
+        now: now(),
+      });
+      if (!result.valid) {
+        req.log.info({ stallId: req.params.stallId, reason: result.reason }, 'pickup check refused');
+      }
+      return result;
+    },
+  );
+
+  app.post(
+    '/stalls/:stallId/orders/:orderId/handover',
+    {
+      preHandler: stallAccess,
+      schema: {
+        tags: ['vendor'],
+        summary:
+          'Hand an order over (→ collected). Cash orders need cashReceived: true (→ paid_cash, fees recorded)',
+        params: orderParams,
+        body: z.object({ cashReceived: z.boolean().default(false) }),
+        response: { 200: z.object({ order: boardOrder }) },
+      },
+    },
+    async (req) => ({
+      order: await handOver(app.db, {
+        stallId: req.params.stallId,
+        orderId: req.params.orderId,
+        cashReceived: req.body.cashReceived,
+        actorId: req.auth!.userId,
+        now: now(),
+      }),
+    }),
+  );
 };

@@ -8,7 +8,13 @@ import { API_URL, TEST_CODE, WEB_URL } from './env';
 export async function signIn(context: BrowserContext, phone: string, name = 'Order Tester') {
   const headers = { origin: WEB_URL };
   const req = await context.request.post(`${API_URL}/v1/auth/otp/request`, { data: { phone }, headers });
-  if (!req.ok() && req.status() !== 429) throw new Error(`otp request ${req.status()} ${await req.text()}`);
+  // 429 is fine only for the resend cooldown (a code was just sent); any other limit is a real failure.
+  if (!req.ok()) {
+    const body = await req.text();
+    if (req.status() !== 429 || !body.includes('before asking for another code')) {
+      throw new Error(`otp request ${req.status()} ${body}`);
+    }
+  }
   const verify = await context.request.post(`${API_URL}/v1/auth/otp/verify`, {
     data: { phone, code: TEST_CODE },
     headers,

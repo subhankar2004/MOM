@@ -52,6 +52,11 @@ export const PHONES = {
   settingsDesktop: phone(55),
   settingsVendor360: phone(56),
   settingsVendorDesktop: phone(57),
+  // pickup scanner tests: the stall owner and a student
+  scanVendor360: phone(58),
+  scanVendorDesktop: phone(59),
+  scanPhone360: phone(60),
+  scanDesktop: phone(61),
 } as const;
 
 export const STORAGE = {
@@ -92,6 +97,8 @@ export function apiEnv(): Record<string, string> {
     PUBLIC_CACHE_TTL_SECONDS: '0',
     // Many sign-ins from one machine in a few seconds.
     AUTH_RATE_LIMIT_PER_MINUTE: '500',
+    // Every test user signs in from 127.0.0.1: well over the default 30 codes per IP per hour.
+    OTP_MAX_PER_IP_PER_HOUR: '5000',
     RATE_LIMIT_PER_MINUTE: '5000',
   };
 }

@@ -11,6 +11,7 @@ import { StatusChip } from '@/components/ui/status-chip';
 import { TokenTicket } from '@/components/ui/token-ticket';
 import { ApiError } from '@/lib/api-client';
 import { STATUS_LABEL, useOrder } from '@/lib/orders';
+import { PaymentPanel } from './payment-panel';
 
 /** The order and its token (QR code and live tracking arrive with #16 and #17). */
 export function OrderView() {
@@ -48,10 +49,11 @@ export function OrderView() {
           pickupCode={o.pickupCode}
           status={STATUS_LABEL[o.status]}
         />
+      ) : o.status === 'pending_payment' || o.status === 'expired' ? (
+        <PaymentPanel order={o} />
       ) : (
         <Card className="w-full p-5 text-center">
           <p className="font-display text-2xl font-bold">{STATUS_LABEL[o.status]}</p>
-          <p className="text-ink-muted">Your token appears here once the payment is confirmed.</p>
         </Card>
       )}
 

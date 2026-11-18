@@ -1,5 +1,6 @@
 import { PgBoss } from 'pg-boss';
 import type { Db } from '../db/client.js';
+import { expireUnpaidOrders } from '../modules/payments/payments.service.js';
 import { resetStallOverrides } from '../modules/stalls/stalls.service.js';
 
 interface JobLogger {
@@ -9,6 +10,7 @@ interface JobLogger {
 
 export const JOBS = {
   resetStallOverrides: 'stalls.reset-overrides',
+  expireUnpaidOrders: 'orders.expire-unpaid',
 } as const;
 
 /**
@@ -27,6 +29,14 @@ export async function startJobs(databaseUrl: string, db: Db, log: JobLogger): Pr
   await boss.work(JOBS.resetStallOverrides, async () => {
     const reset = await resetStallOverrides(db);
     log.info({ job: JOBS.resetStallOverrides, stalls: reset.length }, 'stall open/close switches reset');
+  });
+
+  // UPI orders not paid within the time limit (15 min) expire; checked every minute.
+  await boss.createQueue(JOBS.expireUnpaidOrders);
+  await boss.schedule(JOBS.expireUnpaidOrders, '* * * * *', null, { tz: 'Asia/Kolkata' });
+  await boss.work(JOBS.expireUnpaidOrders, async () => {
+    const n = await expireUnpaidOrders(db, new Date());
+    if (n > 0) log.info({ job: JOBS.expireUnpaidOrders, expired: n }, 'unpaid orders expired');
   });
 
   log.info({ jobs: Object.values(JOBS) }, 'background jobs started');

@@ -13,7 +13,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ApiError, apiRequest } from '@/lib/api-client';
 import { cartStore, useCart } from '@/lib/cart';
 import { cn } from '@/lib/cn';
-import { UPI_CHECKOUT_LIVE } from '@/lib/features';
 import { newIdempotencyKey, type Order } from '@/lib/orders';
 import { useCartQuote } from '@/lib/quote';
 
@@ -82,7 +81,7 @@ export function CheckoutView() {
   const [key] = useState(newIdempotencyKey);
 
   const q = quote.data;
-  const upiFees = UPI_CHECKOUT_LIVE ? (q?.options.upi ?? null) : null;
+  const upiFees = q?.options.upi ?? null;
   const cashFees = q?.options.cash ?? null;
   const method: Method | null = chosen ?? (upiFees ? 'upi' : cashFees ? 'cash' : null);
   const fees = method === 'upi' ? upiFees : method === 'cash' ? cashFees : null;
@@ -103,7 +102,8 @@ export function CheckoutView() {
     onSuccess: ({ order }) => {
       cartStore.clear();
       queryClient.setQueryData(['order', order.id], { order });
-      router.replace(`/orders/${order.id}`);
+      // UPI: straight on to paying; cash: the token is already there.
+      router.replace(order.paymentMethod === 'upi' ? `/orders/${order.id}?pay=1` : `/orders/${order.id}`);
     },
     onError: (err) => {
       // Prices or availability changed under us: show the fresh bill.
@@ -149,11 +149,6 @@ export function CheckoutView() {
               selected={method === 'upi'}
               onSelect={() => setChosen('upi')}
               fees={q.options.upi}
-              disabledReason={
-                q.options.upi && !UPI_CHECKOUT_LIVE
-                  ? 'UPI payments are being set up — coming soon'
-                  : undefined
-              }
             />
             <MethodOption
               method="cash"

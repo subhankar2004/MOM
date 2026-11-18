@@ -32,8 +32,21 @@ export function resetTestUsers() {
       like,
     ]);
     await db.query(`delete from vendor_invites where phone like $1`, [like]);
-    // Stalls created by tests (slug e2e-…) and their orders
-    await db.query(`delete from orders where stall_id in (select id from stalls where slug like 'e2e-%')`);
+    // Stalls created by tests (slug e2e-…) and their orders. Orders with money history
+    // (ledger, append-only by design) can't be deleted: their stall is retired instead —
+    // suspended (hidden from students) and renamed so the next run can reuse the slug.
+    const deletable = `select o.id from orders o join stalls s on s.id = o.stall_id
+       where s.slug like 'e2e-%' and not exists (select 1 from ledger_entries l where l.order_id = o.id)`;
+    await db.query(`delete from refunds where order_id in (${deletable})`);
+    await db.query(`delete from payments where order_id in (${deletable})`);
+    await db.query(`delete from orders where id in (${deletable})`);
+    await db.query(
+      `update stalls set status = 'suspended', slug = 'retired-' || replace(id::text, '-', '')
+       where slug like 'e2e-%' and exists (select 1 from orders o where o.stall_id = stalls.id)`,
+    );
+    await db.query(
+      `delete from stall_members where stall_id in (select id from stalls where slug like 'retired-%')`,
+    );
     await db.query(`delete from stalls where slug like 'e2e-%'`);
     await db.query(`delete from auth_otps where phone like $1`, [like]);
   });
@@ -178,6 +191,18 @@ export function setOrderStatus(orderId: string, status: 'preparing' | 'ready' | 
          payment_status = case when $3 and payment_method = 'cash' then 'paid_cash' else payment_status end
        where id = $1`,
       [orderId, status, status === 'collected'],
+    ),
+  );
+}
+
+/** Makes `phone` an owner of the stall (as the admin would, #23). */
+export function addStallMember(stallId: string, phone: string) {
+  return withDb((db) =>
+    db.query(
+      `insert into stall_members (stall_id, user_id, role)
+       select $1, id, 'owner' from users where phone = $2
+       on conflict do nothing`,
+      [stallId, phone],
     ),
   );
 }

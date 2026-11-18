@@ -50,3 +50,13 @@ export function orderDateLabel(date: Date, now: Date): string {
   const day = diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : shortDateFmt.format(date);
   return `${day}, ${formatTime(date)}`;
 }
+
+/** How long an order has been waiting: "Just now" · "4 min" · "1 h 5 min". */
+export function elapsedLabel(since: Date, now: Date): string {
+  const minutes = Math.max(0, Math.floor((now.getTime() - since.getTime()) / 60_000));
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m ? `${h} h ${m} min` : `${h} h`;
+}

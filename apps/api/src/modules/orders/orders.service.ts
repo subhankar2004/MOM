@@ -74,6 +74,7 @@ export async function getOrderForUser(db: Db, orderId: string, userId: string) {
     tokenDay: o.tokenDay,
     pickupCode: o.pickupCode,
     note: o.note,
+    rejectReason: o.rejectReason,
     items,
     subtotalPaise: o.subtotalPaise,
     platformFeePaise: o.platformFeePaise,

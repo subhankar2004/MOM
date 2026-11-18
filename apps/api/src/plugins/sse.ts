@@ -1,5 +1,4 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { OrderEvent } from '../modules/events/event-hub.js';
 
 export const SSE_HEARTBEAT_MS = 25_000;
 
@@ -8,10 +7,10 @@ export const SSE_HEARTBEAT_MS = 25_000;
  * and returns a cleanup. A comment line every 25 s keeps proxies and the AWS load balancer
  * (idle timeout must be > 25 s) from closing an idle connection.
  */
-export function openEventStream(
+export function openEventStream<E extends { id: string }>(
   req: FastifyRequest,
   reply: FastifyReply,
-  subscribe: (send: (event: OrderEvent) => void) => { unsubscribe: () => void; resync: boolean },
+  subscribe: (send: (event: E) => void) => { unsubscribe: () => void; resync: boolean },
   opts: { heartbeatMs?: number; onShutdown?: (fn: () => void) => () => void } = {},
 ): void {
   reply.hijack();
@@ -26,7 +25,7 @@ export function openEventStream(
   // Ask browsers to reconnect after 3 s if the connection drops.
   res.write('retry: 3000\n\n');
 
-  const send = (event: OrderEvent) => {
+  const send = (event: E) => {
     res.write(`id: ${event.id}\nevent: order\ndata: ${JSON.stringify(event)}\n\n`);
   };
   const { unsubscribe, resync } = subscribe(send);

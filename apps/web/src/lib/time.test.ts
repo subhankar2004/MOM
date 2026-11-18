@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { closingSoonLabel, formatTime, opensLabel, orderDateLabel } from './time';
+import { closingSoonLabel, elapsedLabel, formatTime, opensLabel, orderDateLabel } from './time';
 
 const ist = (wallClock: string) => new Date(`${wallClock.replace(' ', 'T')}:00+05:30`);
 
@@ -45,5 +45,17 @@ describe('orderDateLabel', () => {
     expect(orderDateLabel(new Date('2026-11-17T20:00:00+05:30'), now)).toBe('Yesterday, 8 PM');
     // 23:30 IST on the 12th is still the 12th in India even though it's the 12th 18:00 UTC.
     expect(orderDateLabel(new Date('2026-11-12T23:30:00+05:30'), now)).toBe('12 Nov, 11:30 PM');
+  });
+});
+
+describe('elapsedLabel', () => {
+  const at = new Date('2026-11-18T12:00:00Z');
+  const after = (ms: number) => new Date(at.getTime() + ms);
+  it('minutes, then hours and minutes', () => {
+    expect(elapsedLabel(at, after(20_000))).toBe('Just now');
+    expect(elapsedLabel(at, after(4 * 60_000 + 59_000))).toBe('4 min');
+    expect(elapsedLabel(at, after(65 * 60_000))).toBe('1 h 5 min');
+    expect(elapsedLabel(at, after(120 * 60_000))).toBe('2 h');
+    expect(elapsedLabel(at, after(-5000))).toBe('Just now'); // device clock slightly behind
   });
 });

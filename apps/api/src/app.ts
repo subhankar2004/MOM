@@ -17,6 +17,7 @@ import { razorpayWebhookRoutes } from './modules/payments/webhooks.routes.js';
 import { EventHub } from './modules/events/event-hub.js';
 import { stallsRoutes } from './modules/stalls/stalls.routes.js';
 import { StallsService } from './modules/stalls/stalls.service.js';
+import { vendorOrdersRoutes } from './modules/vendor/vendor-orders.routes.js';
 import { vendorRoutes } from './modules/vendor/vendor.routes.js';
 import { registerAuth } from './plugins/auth.js';
 import { registerDocs } from './plugins/docs.js';
@@ -201,6 +202,7 @@ export async function buildApp({
         }
       }
       await v1.register(vendorRoutes, { prefix: '/vendor' });
+      await v1.register(vendorOrdersRoutes, { prefix: '/vendor', now, events, gateway });
       await v1.register(adminAccessRoutes, { prefix: '/admin' });
     },
     { prefix: '/v1' },

@@ -92,7 +92,17 @@ function OrderDetails({ order: o }: { order: Order }) {
             <MapPin size={14} aria-hidden /> {o.stall.location}
           </span>
         )}
-        {o.paymentMethod === 'cash' && o.paymentStatus === 'due' && (
+        {o.status === 'rejected' && (
+          <p role="status" className="font-semibold">
+            {o.rejectReason
+              ? `${o.stall.name}: “${o.rejectReason}”`
+              : `${o.stall.name} couldn’t take this order.`}
+            {o.paymentStatus === 'refunded' || o.paymentStatus === 'refund_pending'
+              ? ' Your payment is being refunded in full.'
+              : ''}
+          </p>
+        )}
+        {o.status !== 'rejected' && o.paymentMethod === 'cash' && o.paymentStatus === 'due' && (
           <p className="font-semibold">Pay {formatINR(o.totalPaise)} in cash when you collect.</p>
         )}
       </div>

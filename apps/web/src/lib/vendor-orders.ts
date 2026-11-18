@@ -86,3 +86,36 @@ export function useBoardAction(stallId: string) {
     onSettled: () => void queryClient.invalidateQueries({ queryKey: boardKey(stallId) }),
   });
 }
+
+export type PickupCheck =
+  | { valid: true; order: BoardOrder; warning: 'not_ready' | null; cashDuePaise: number }
+  | {
+      valid: false;
+      reason: 'unknown' | 'wrong_stall' | 'already_collected' | 'not_paid' | 'cancelled';
+      message: string;
+      order: BoardOrder | null;
+    };
+
+/** Checks an order at the counter (changes nothing). */
+export function usePickupVerify(stallId: string) {
+  return useMutation({
+    mutationFn: (input: { qr: string } | { tokenNo: number; pickupCode: string }) =>
+      apiRequest<PickupCheck>(`/v1/vendor/stalls/${encodeURIComponent(stallId)}/pickup/verify`, {
+        method: 'POST',
+        body: input,
+      }),
+  });
+}
+
+/** Hands an order over (cash orders: with the cash received). */
+export function useHandOver(stallId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { orderId: string; cashReceived: boolean }) =>
+      apiRequest<{ order: BoardOrder }>(
+        `/v1/vendor/stalls/${encodeURIComponent(stallId)}/orders/${encodeURIComponent(input.orderId)}/handover`,
+        { method: 'POST', body: { cashReceived: input.cashReceived } },
+      ),
+    onSettled: () => void queryClient.invalidateQueries({ queryKey: boardKey(stallId) }),
+  });
+}

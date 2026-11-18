@@ -150,6 +150,7 @@ export async function buildApp({
       testPhones: env.SMS_TEST_PHONES,
       testCode: env.SMS_TEST_CODE,
       superAdminPhones: env.SUPER_ADMIN_PHONES,
+      maxOtpsPerIpPerHour: env.OTP_MAX_PER_IP_PER_HOUR,
     },
     app.log,
   );
@@ -208,7 +209,13 @@ export async function buildApp({
         }
       }
       await v1.register(vendorRoutes, { prefix: '/vendor' });
-      await v1.register(vendorOrdersRoutes, { prefix: '/vendor', now, events, gateway });
+      await v1.register(vendorOrdersRoutes, {
+        prefix: '/vendor',
+        now,
+        events,
+        gateway,
+        qrSecret: env.QR_SECRET,
+      });
       const storage = imageStorage ?? createImageStorage(env);
       await v1.register(menuRoutes, {
         prefix: '/vendor',

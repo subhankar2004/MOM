@@ -29,6 +29,8 @@ export interface AuthConfig {
   testCode?: string;
   /** SUPER_ADMIN_PHONES: these accounts are promoted to super admin when they sign in. */
   superAdminPhones: string[];
+  /** OTP_MAX_PER_IP_PER_HOUR (default AUTH_RULES.maxOtpsPerIpPerHour). */
+  maxOtpsPerIpPerHour?: number;
 }
 
 export interface ClientMeta {
@@ -112,7 +114,7 @@ export class AuthService {
       .select({ n: sql<number>`count(*)::int` })
       .from(authOtps)
       .where(and(eq(authOtps.ip, meta.ip), gt(authOtps.createdAt, sql`now() - interval '1 hour'`)));
-    if ((ipStats?.n ?? 0) >= rules.maxOtpsPerIpPerHour) {
+    if ((ipStats?.n ?? 0) >= (this.config.maxOtpsPerIpPerHour ?? rules.maxOtpsPerIpPerHour)) {
       this.log.warn({ ip: meta.ip }, 'OTP requests per IP limit reached');
       throw new AppError(
         429,

@@ -9,7 +9,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { TextField } from '@/components/ui/text-field';
 import { VegDot } from '@/components/ui/veg-dot';
 import { cn } from '@/lib/cn';
-import { uploadDishPhoto, type EditorCategory, type EditorItem, type ItemFields } from '@/lib/vendor-menu';
+import { uploadStallPhoto, type EditorCategory, type EditorItem, type ItemFields } from '@/lib/vendor-menu';
 
 export interface DishDraft {
   /** The dish being edited, or null for a new one. */
@@ -111,7 +111,7 @@ function DishForm({
     setPhotoError(null);
     setUploading(true);
     try {
-      setPhoto(await uploadDishPhoto(stallId, file));
+      setPhoto(await uploadStallPhoto(stallId, file));
     } catch (err) {
       setPhotoError(err instanceof Error ? err.message : "The photo couldn't be uploaded.");
     } finally {

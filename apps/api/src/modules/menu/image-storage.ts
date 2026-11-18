@@ -9,6 +9,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { Env } from '../../config/env.js';
+import { badRequest } from '../../lib/errors.js';
 
 /** Photos are compressed in the browser first (WebP, ≤ 1200 px), so 2 MB is generous. */
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
@@ -32,20 +33,39 @@ export interface ImageStorage {
   delete(key: string): Promise<void>;
 }
 
+/** Dish photos, or the stall's own cover photo. */
+export type ImageFolder = 'items' | 'cover';
+
 /**
  * Every key a stall can write starts with its own prefix, and the server picks the key, so
- * a vendor can't upload over another stall's photos (or reuse one of theirs on an item).
+ * a vendor can't upload over another stall's photos (or reuse one of theirs).
  */
-export function itemImageKey(stallId: string, contentType: ImageType): string {
-  return `stalls/${stallId}/items/${randomUUID()}.${IMAGE_TYPES[contentType]}`;
+export function stallImageKey(stallId: string, folder: ImageFolder, contentType: ImageType): string {
+  return `stalls/${stallId}/${folder}/${randomUUID()}.${IMAGE_TYPES[contentType]}`;
 }
 
 const KEY_PATTERN =
-  /^stalls\/([0-9a-f-]{36})\/items\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(webp|jpg|png)$/;
+  /^stalls\/([0-9a-f-]{36})\/(items|cover)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(webp|jpg|png)$/;
 
-export function isStallImageKey(stallId: string, key: string): boolean {
+export function isStallImageKey(stallId: string, key: string, folder: ImageFolder): boolean {
   const m = KEY_PATTERN.exec(key);
-  return m !== null && m[1] === stallId;
+  return m !== null && m[1] === stallId && m[2] === folder;
+}
+
+/** The photo must be one this stall uploaded to `folder`, and really be a small image. */
+export async function assertUploadedImage(
+  storage: ImageStorage,
+  stallId: string,
+  key: string,
+  folder: ImageFolder,
+): Promise<void> {
+  if (!isStallImageKey(stallId, key, folder)) throw badRequest("That photo doesn't belong to this stall");
+  const object = await storage.head(key);
+  if (!object) throw badRequest('The photo has not finished uploading; try again');
+  if (object.size > MAX_IMAGE_BYTES) throw badRequest('Photos must be 2 MB or smaller');
+  if (!object.contentType || !(object.contentType in IMAGE_TYPES)) {
+    throw badRequest('Photos must be WebP, JPEG or PNG');
+  }
 }
 
 export function createImageStorage(env: Env): ImageStorage {

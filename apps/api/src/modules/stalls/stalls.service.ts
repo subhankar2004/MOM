@@ -48,6 +48,11 @@ export class StallsService {
     this.now = options.now ?? (() => new Date());
   }
 
+  /** Forget the cached list, so a vendor's change (open, close, payments) shows on the next request. */
+  invalidate(): void {
+    this.cache = null;
+  }
+
   /** Active stalls: open first (shortest wait first), then paused, then closed (soonest opening first). */
   async list(): Promise<PublicStall[]> {
     const ttl = this.options.cacheTtlMs ?? 15_000;

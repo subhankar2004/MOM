@@ -5,7 +5,7 @@ import { badRequest } from '../../lib/errors.js';
 import { requireRole, requireStallAccess } from '../../plugins/authz.js';
 import {
   IMAGE_TYPES,
-  itemImageKey,
+  stallImageKey,
   MAX_IMAGE_BYTES,
   type ImageStorage,
   type ImageType,
@@ -253,6 +253,8 @@ export const menuRoutes: FastifyPluginAsyncZod<MenuRoutesOptions> = async (app, 
             error: 'Photos must be WebP, JPEG or PNG',
           }),
           size: z.number().int().positive(),
+          /** A dish photo (default) or the stall's cover photo. */
+          purpose: z.enum(['item', 'cover']).default('item'),
         }),
         response: {
           200: z.object({
@@ -268,7 +270,11 @@ export const menuRoutes: FastifyPluginAsyncZod<MenuRoutesOptions> = async (app, 
     async (req) => {
       if (req.body.size > MAX_IMAGE_BYTES) throw badRequest('Photos must be 2 MB or smaller');
       const upload = await opts.storage.presignPut({
-        key: itemImageKey(req.params.stallId, req.body.contentType),
+        key: stallImageKey(
+          req.params.stallId,
+          req.body.purpose === 'cover' ? 'cover' : 'items',
+          req.body.contentType,
+        ),
         contentType: req.body.contentType,
         size: req.body.size,
       });

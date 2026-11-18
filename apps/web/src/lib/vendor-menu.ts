@@ -105,16 +105,23 @@ export const menuApi = {
 
 /**
  * Compresses a photo in the browser, then uploads it straight to storage with a short-lived
- * signed URL from the API. Returns the key to save on the dish.
+ * signed URL from the API. Returns the key to save on the dish (or, for `cover`, the stall).
  */
-export async function uploadDishPhoto(stallId: string, file: Blob): Promise<{ key: string; url: string }> {
+export async function uploadStallPhoto(
+  stallId: string,
+  file: Blob,
+  purpose: 'item' | 'cover' = 'item',
+): Promise<{ key: string; url: string }> {
   const { blob, type } = await compressImage(file);
   const signed = await apiRequest<{
     key: string;
     uploadUrl: string;
     headers: Record<string, string>;
     publicUrl: string;
-  }>(`${base(stallId)}/uploads/presign`, { method: 'POST', body: { contentType: type, size: blob.size } });
+  }>(`${base(stallId)}/uploads/presign`, {
+    method: 'POST',
+    body: { contentType: type, size: blob.size, purpose },
+  });
   let res: Response;
   try {
     res = await fetch(signed.uploadUrl, { method: 'PUT', body: blob, headers: signed.headers });

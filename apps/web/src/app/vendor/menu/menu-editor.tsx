@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { IconButton } from '@/components/ui/icon-button';
 import { Sheet } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { TextField } from '@/components/ui/text-field';
 import { useToast } from '@/components/ui/toast';
 import { VegDot } from '@/components/ui/veg-dot';
@@ -407,31 +408,9 @@ function DishRow({
   );
 }
 
-/** A large on/off switch: the one control vendors use many times a day. */
+/** The one control vendors use many times a day. */
 function AvailabilitySwitch({ name, on, onToggle }: { name: string; on: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label={`${name} available`}
-      onClick={onToggle}
-      className="flex min-h-11 shrink-0 items-center gap-2 rounded-full px-2"
-    >
-      <span
-        aria-hidden
-        className={cn('relative h-7 w-12 rounded-full transition-colors', on ? 'bg-veg' : 'bg-border')}
-      >
-        <span
-          className={cn(
-            'absolute top-1 left-1 size-5 rounded-full bg-white shadow transition-transform',
-            on && 'translate-x-5',
-          )}
-        />
-      </span>
-      <span className="w-16 text-left text-sm font-medium">{on ? 'On' : 'Sold out'}</span>
-    </button>
-  );
+  return <Switch label={`${name} available`} on={on} onToggle={onToggle} offText="Sold out" />;
 }
 
 function CategorySheet({

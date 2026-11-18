@@ -20,6 +20,8 @@ import { razorpayWebhookRoutes } from './modules/payments/webhooks.routes.js';
 import { EventHub } from './modules/events/event-hub.js';
 import { stallsRoutes } from './modules/stalls/stalls.routes.js';
 import { StallsService } from './modules/stalls/stalls.service.js';
+import { stallSettingsRoutes } from './modules/vendor/stall-settings.routes.js';
+import { StallSettingsService } from './modules/vendor/stall-settings.service.js';
 import { vendorOrdersRoutes } from './modules/vendor/vendor-orders.routes.js';
 import { vendorRoutes } from './modules/vendor/vendor.routes.js';
 import { registerAuth } from './plugins/auth.js';
@@ -172,15 +174,13 @@ export async function buildApp({
         ratePerMinute: env.AUTH_RATE_LIMIT_PER_MINUTE,
       });
       await v1.register(meRoutes, { prefix: '/me', auth: authService, cookies: cookieConfig });
-      await v1.register(stallsRoutes, {
-        prefix: '/stalls',
-        stalls: new StallsService(db, {
-          publicImageBaseUrl: env.PUBLIC_IMAGE_BASE_URL,
-          now,
-          cacheTtlMs: stallsCacheTtlMs ?? env.PUBLIC_CACHE_TTL_SECONDS * 1000,
-          upiOnline,
-        }),
+      const stallsService = new StallsService(db, {
+        publicImageBaseUrl: env.PUBLIC_IMAGE_BASE_URL,
+        now,
+        cacheTtlMs: stallsCacheTtlMs ?? env.PUBLIC_CACHE_TTL_SECONDS * 1000,
+        upiOnline,
       });
+      await v1.register(stallsRoutes, { prefix: '/stalls', stalls: stallsService });
       await v1.register(cartRoutes, { prefix: '/cart', now, upiOnline });
       await v1.register(ordersRoutes, {
         prefix: '/orders',
@@ -215,6 +215,15 @@ export async function buildApp({
         now,
         storage,
         menu: new MenuService(db, storage, { publicImageBaseUrl: env.PUBLIC_IMAGE_BASE_URL }),
+      });
+      await v1.register(stallSettingsRoutes, {
+        prefix: '/vendor',
+        now,
+        settings: new StallSettingsService(db, storage, {
+          publicImageBaseUrl: env.PUBLIC_IMAGE_BASE_URL,
+          upiOnline,
+        }),
+        onChange: () => stallsService.invalidate(),
       });
       await v1.register(adminAccessRoutes, { prefix: '/admin' });
     },

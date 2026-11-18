@@ -12,7 +12,10 @@ const fees = z
   .nullable();
 
 /** POST /v1/cart/quote — public: re-price a cart before checkout. */
-export const cartRoutes: FastifyPluginAsyncZod<{ now?: () => Date }> = async (app, opts) => {
+export const cartRoutes: FastifyPluginAsyncZod<{ now?: () => Date; upiOnline: boolean }> = async (
+  app,
+  opts,
+) => {
   const now = opts.now ?? (() => new Date());
 
   app.post(
@@ -67,6 +70,6 @@ export const cartRoutes: FastifyPluginAsyncZod<{ now?: () => Date }> = async (ap
         },
       },
     },
-    async (req) => quoteCart(app.db, req.body, now()),
+    async (req) => quoteCart(app.db, req.body, now(), { upiOnline: opts.upiOnline }),
   );
 };

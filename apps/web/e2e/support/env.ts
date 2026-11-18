@@ -11,6 +11,9 @@ export const E2E_DATABASE_URL = process.env.E2E_DATABASE_URL ?? 'postgres://mom:
 /** Test phones get this fixed code instead of an SMS (API: SMS_TEST_PHONES/SMS_TEST_CODE). */
 export const TEST_CODE = '246810';
 
+/** Razorpay key secret used by the fake gateway in browser tests (test-only). */
+export const E2E_RAZORPAY_SECRET = 'e2e-razorpay-key-secret';
+
 /** Every phone the tests use: +91 90000 001xx. Wiped before each run. */
 export const PHONE_PREFIX = '+91900000';
 export const phone = (n: number) => `${PHONE_PREFIX}${String(100 + n).padStart(4, '0')}`;
@@ -30,6 +33,8 @@ export const PHONES = {
   // one fresh student per Playwright project for ordering tests (cash-order limits are per student)
   orderPhone360: phone(40),
   orderDesktop: phone(41),
+  upiPhone360: phone(42),
+  upiDesktop: phone(43),
 } as const;
 
 export const STORAGE = {
@@ -55,6 +60,11 @@ export function apiEnv(): Record<string, string> {
     SMS_TEST_CODE: TEST_CODE,
     // The admin becomes super admin by signing in (bootstrap rule, #9).
     SUPER_ADMIN_PHONES: PHONES.admin,
+    // Offline payment gateway; the browser tests stub Razorpay Checkout and sign with this secret.
+    PAYMENTS_PROVIDER: 'fake',
+    RAZORPAY_KEY_ID: 'rzp_test_e2efake',
+    RAZORPAY_KEY_SECRET: E2E_RAZORPAY_SECRET,
+    RAZORPAY_WEBHOOK_SECRET: 'e2e-razorpay-webhook-secret',
     // Always-fresh stall list, so tests see database changes on the next poll.
     PUBLIC_CACHE_TTL_SECONDS: '0',
     // Many sign-ins from one machine in a few seconds.

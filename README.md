@@ -72,6 +72,14 @@ category chips that follow the scroll, dish rows (photo, veg mark, price, Add / 
 sheet, "Sold out" dishes that can't be added, and a banner when the stall is closed or paused. One
 stall per cart: adding from another stall asks first. A 50-dish menu is tested at 4× CPU slowdown.
 
+**Payments (#15):** Razorpay (no SDK; REST + Checkout). Paying creates a Razorpay order (reused on a
+second tap); success is accepted only with a valid HMAC signature, and the same `confirmPayment()`
+serves the browser and the webhook (first one wins, the other is a no-op): payment captured → token →
+order placed → fee in the ledger. Unpaid UPI orders expire after 15 min (pg-boss, every minute); a
+payment that arrives later is refunded automatically. `refundOrder()` reverses MOM's fee in the
+ledger. Without Razorpay keys, UPI simply isn't offered. Tests use a fake gateway and a stubbed
+Checkout that signs like Razorpay.
+
 **Orders (#14):** one transaction: lock the student, re-price, refuse if the total differs from
 what was shown, check stall/method/cash limits (2 open cash orders, strikes), snapshot fees, create
 the order, and for cash issue the day's next token (atomic counter per stall and IST day) and a
@@ -109,6 +117,8 @@ Fastify 5 + Zod. `npm run dev` serves it on <http://localhost:4000>:
 | `GET /v1/stalls/:slug/menu`                                   | public: categories → dishes (sold-out flagged; deleted and empty hidden)                                                         |
 | `POST /v1/cart/quote`                                         | public: re-price a cart from the database → per-line status (ok, price changed, sold out, removed), UPI and cash bills, problems |
 | `POST /v1/orders` (+ `Idempotency-Key`), `GET /v1/orders/:id` | signed in: place an order (cash → token now; UPI → pending payment), view my order                                               |
+| `POST /v1/payments/razorpay/order`, `/verify`                 | signed in: start paying a UPI order; verify Razorpay's signature → token                                                         |
+| `POST /v1/webhooks/razorpay`                                  | Razorpay → MOM (signed): confirms payments even if the browser closed; de-duplicated                                             |
 | `GET /v1/vendor/stalls`, `/stalls/:stallId`                   | stall console: my stalls (members) / all (super admin)                                                                           |
 | `POST`, `GET /v1/admin/stalls/:stallId/members`               | super admin: register a stall owner's phone, list members + pending                                                              |
 | `POST /v1/admin/users/:userId/suspension`                     | super admin: suspend (ends all sessions) or reactivate                                                                           |

@@ -90,6 +90,17 @@ const envSchema = z
       .regex(/^\d{6}$/, 'must be 6 digits')
       .optional(),
 
+    // --- Payments (#15): Razorpay. Unset = UPI is simply not offered. ---
+    /** 'fake' = offline stand-in for automated tests (never on AWS). */
+    PAYMENTS_PROVIDER: z.enum(['razorpay', 'fake']).default('razorpay'),
+    RAZORPAY_KEY_ID: z
+      .string()
+      .regex(/^rzp_(test|live)_[A-Za-z0-9]+$/, 'must look like rzp_test_… or rzp_live_…')
+      .optional(),
+    RAZORPAY_KEY_SECRET: z.string().min(8).optional(),
+    /** Chosen by us and also entered in the Razorpay dashboard's webhook settings. */
+    RAZORPAY_WEBHOOK_SECRET: z.string().min(16).optional(),
+
     // --- AWS End User Messaging SMS (SMS_PROVIDER=aws), India DLT ---
     AWS_REGION: z.string().min(1).default('ap-south-1'),
     /** The DLT-registered sender ID (header), e.g. "MOMVST". */
@@ -137,6 +148,27 @@ const envSchema = z
           ctx.addIssue({ code: 'custom', path: [key], message: 'required when SMS_PROVIDER=aws' });
       }
     }
+    if (deployed && env.PAYMENTS_PROVIDER === 'fake') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PAYMENTS_PROVIDER'],
+        message: 'the fake payment provider is for tests only',
+      });
+    }
+    if (Boolean(env.RAZORPAY_KEY_ID) !== Boolean(env.RAZORPAY_KEY_SECRET)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['RAZORPAY_KEY_SECRET'],
+        message: 'set both RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET, or neither',
+      });
+    }
+    if (env.NODE_ENV === 'production' && env.RAZORPAY_KEY_ID?.startsWith('rzp_test_')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['RAZORPAY_KEY_ID'],
+        message: 'production must use live keys (rzp_live_…)',
+      });
+    }
     if (env.JWT_SECRET === env.OTP_PEPPER) {
       ctx.addIssue({ code: 'custom', path: ['OTP_PEPPER'], message: 'must be different from JWT_SECRET' });
     }
@@ -153,6 +185,11 @@ export type Env = z.infer<typeof envSchema>;
 
 export const isDeployed = (env: Pick<Env, 'NODE_ENV'>) =>
   env.NODE_ENV === 'staging' || env.NODE_ENV === 'production';
+/** UPI can be offered when a gateway is configured (real Razorpay keys, or the fake one in tests). */
+export const upiConfigured = (
+  env: Pick<Env, 'PAYMENTS_PROVIDER' | 'RAZORPAY_KEY_ID' | 'RAZORPAY_KEY_SECRET'>,
+) => Boolean(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET);
+
 export const cookiesSecure = (env: Pick<Env, 'NODE_ENV' | 'COOKIE_SECURE'>) =>
   env.COOKIE_SECURE ?? !(env.NODE_ENV === 'development' || env.NODE_ENV === 'test');
 export const apiDocsEnabled = (env: Pick<Env, 'NODE_ENV' | 'API_DOCS'>) =>

@@ -43,7 +43,10 @@ export const orderSchema = z.object({
 });
 
 /** /v1/orders — a signed-in user's own orders. */
-export const ordersRoutes: FastifyPluginAsyncZod<{ now?: () => Date }> = async (app, opts) => {
+export const ordersRoutes: FastifyPluginAsyncZod<{ now?: () => Date; upiOnline: boolean }> = async (
+  app,
+  opts,
+) => {
   const now = opts.now ?? (() => new Date());
   app.addHook('preHandler', app.requireAuth);
 
@@ -89,7 +92,12 @@ export const ordersRoutes: FastifyPluginAsyncZod<{ now?: () => Date }> = async (
       if (new Set(ids).size !== ids.length) throw badRequest('Each dish only once');
       const { order, replayed } = await placeOrder(
         app.db,
-        { ...req.body, userId: req.auth!.userId, idempotencyKey: req.headers['idempotency-key'] },
+        {
+          ...req.body,
+          userId: req.auth!.userId,
+          idempotencyKey: req.headers['idempotency-key'],
+          upiOnline: opts.upiOnline,
+        },
         now(),
       );
       return reply.status(replayed ? 200 : 201).send({ order });

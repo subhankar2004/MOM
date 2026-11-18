@@ -32,7 +32,7 @@ export type QuoteProblem =
  * Re-prices a cart from the database (spec §6.1 S4). The client's prices are only used to
  * detect changes — the server's price always wins, here and when the order is placed (#14).
  */
-export async function quoteCart(db: Db, req: QuoteRequest, now: Date) {
+export async function quoteCart(db: Db, req: QuoteRequest, now: Date, cfg: { upiOnline: boolean }) {
   const [stall] = await db
     .select()
     .from(stalls)
@@ -86,7 +86,7 @@ export async function quoteCart(db: Db, req: QuoteRequest, now: Date) {
   const orderable = lines.filter((l) => l.status === 'ok' || l.status === 'price_changed');
   const subtotalPaise = orderable.reduce((sum, l) => sum + l.lineTotalPaise, 0);
   const rates = { platformFeeBps: settings.platformFeeBps, cashFeeBps: settings.cashFeeBps };
-  const upiAccepted = stall.upiEnabled && stall.routeStatus === 'activated';
+  const upiAccepted = cfg.upiOnline && stall.upiEnabled && stall.routeStatus === 'activated';
   const options: { upi: FeeBreakdown | null; cash: FeeBreakdown | null } = {
     upi: upiAccepted && subtotalPaise > 0 ? calcFees(subtotalPaise, 'upi', rates) : null,
     cash: stall.cashEnabled && subtotalPaise > 0 ? calcFees(subtotalPaise, 'cash', rates) : null,

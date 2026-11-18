@@ -62,6 +62,9 @@ export const PHONES = {
   salesVendorDesktop: phone(63),
   salesPhone360: phone(64),
   salesDesktop: phone(65),
+  // a stall owner registered by the admin in the onboarding test
+  onboardOwner360: phone(66),
+  onboardOwnerDesktop: phone(67),
 } as const;
 
 export const STORAGE = {

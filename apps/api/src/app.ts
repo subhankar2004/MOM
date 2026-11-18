@@ -8,6 +8,8 @@ import type { Db } from './db/client.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import { adminAccessRoutes } from './modules/admin/members.routes.js';
+import { adminStallsRoutes } from './modules/admin/stalls-admin.routes.js';
+import { StallsAdminService } from './modules/admin/stalls-admin.service.js';
 import { meRoutes } from './modules/auth/me.routes.js';
 import { cartRoutes } from './modules/cart/cart.routes.js';
 import { createImageStorage, type ImageStorage } from './modules/menu/image-storage.js';
@@ -235,6 +237,10 @@ export async function buildApp({
       });
       await v1.register(reportsRoutes, { prefix: '/vendor', now });
       await v1.register(adminAccessRoutes, { prefix: '/admin' });
+      await v1.register(adminStallsRoutes, {
+        prefix: '/admin',
+        stalls: new StallsAdminService(db, gateway, { publicImageBaseUrl: env.PUBLIC_IMAGE_BASE_URL }),
+      });
     },
     { prefix: '/v1' },
   );

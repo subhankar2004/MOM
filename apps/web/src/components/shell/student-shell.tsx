@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { AccountButton } from '@/components/auth/account-button';
 import { CartBar } from '@/components/food/cart-bar';
+import { LiveOrderUpdates } from '@/components/order/live-order-updates';
 import { Logo } from '@/components/ui/logo';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { StudentNav } from './student-nav';
@@ -28,6 +29,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <CartBar />
+      <LiveOrderUpdates />
       <StudentNav />
     </>
   );

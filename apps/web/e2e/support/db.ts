@@ -169,3 +169,15 @@ export function updateDish(stallId: string, name: string, change: { rupees?: num
 export function setStallOpen(stallId: string, open: boolean | null) {
   return withDb((db) => db.query(`update stalls set is_open_override = $2 where id = $1`, [stallId, open]));
 }
+
+/** Moves an order along the way the stall would (until the vendor board exists, #18). */
+export function setOrderStatus(orderId: string, status: 'preparing' | 'ready' | 'collected') {
+  return withDb((db) =>
+    db.query(
+      `update orders set status = $2::order_status,
+         payment_status = case when $3 and payment_method = 'cash' then 'paid_cash' else payment_status end
+       where id = $1`,
+      [orderId, status, status === 'collected'],
+    ),
+  );
+}

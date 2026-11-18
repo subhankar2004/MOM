@@ -81,3 +81,6 @@ async function startJobsWhenPossible(): Promise<void> {
   }
 }
 if (env.JOBS_ENABLED) void startJobsWhenPossible();
+// Live order updates: listen for Postgres notifications (retries by itself if the DB is down).
+// Stopped by the app's preClose hook.
+void app.events.connect(env.DATABASE_URL);

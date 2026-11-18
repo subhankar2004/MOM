@@ -3,6 +3,11 @@ import { z } from 'zod';
 import { badRequest } from '../../lib/errors.js';
 import { getOrderForUser, placeOrder, type OrderView } from './orders.service.js';
 import { pickupQrPayload } from './pickup-qr.js';
+import { cancelOrderByStudent } from './cancel.service.js';
+import { listOrdersForUser } from './orders-list.service.js';
+import { openEventStream } from '../../plugins/sse.js';
+import type { EventHub } from '../events/event-hub.js';
+import type { PaymentGateway } from '../payments/gateway.js';
 
 export const orderSchema = z.object({
   id: z.uuid(),
@@ -60,6 +65,8 @@ export const ordersRoutes: FastifyPluginAsyncZod<{
   now?: () => Date;
   upiOnline: boolean;
   qrSecret: string;
+  events: EventHub;
+  gateway: PaymentGateway | null;
 }> = async (app, opts) => {
   const now = opts.now ?? (() => new Date());
   app.addHook('preHandler', app.requireAuth);
@@ -115,6 +122,94 @@ export const ordersRoutes: FastifyPluginAsyncZod<{
         now(),
       );
       return reply.status(replayed ? 200 : 201).send({ order: toOrderResponse(order, opts.qrSecret) });
+    },
+  );
+
+  app.get(
+    '/',
+    {
+      schema: {
+        tags: ['orders'],
+        summary: 'My orders: active (in progress) or past (paginated, newest first)',
+        querystring: z.object({
+          scope: z.enum(['active', 'past']).default('active'),
+          before: z.uuid('Not a valid order id').optional(),
+          limit: z.coerce.number().int().min(1).max(50).default(20),
+        }),
+        response: {
+          200: z.object({
+            orders: z.array(
+              z.object({
+                id: z.uuid(),
+                stall: z.object({ slug: z.string(), name: z.string() }),
+                status: orderSchema.shape.status,
+                paymentMethod: orderSchema.shape.paymentMethod,
+                paymentStatus: orderSchema.shape.paymentStatus,
+                tokenNo: z.number().int().nullable(),
+                totalPaise: z.number().int(),
+                itemCount: z.number().int(),
+                itemsPreview: z.string(),
+                createdAt: z.date(),
+              }),
+            ),
+            nextBefore: z.string().nullable(),
+          }),
+        },
+      },
+    },
+    async (req) =>
+      listOrdersForUser(app.db, req.auth!.userId, req.query.scope, {
+        before: req.query.before,
+        limit: req.query.limit,
+      }),
+  );
+
+  // Live updates for all my orders (Server-Sent Events). Resumes with Last-Event-ID.
+  app.get(
+    '/events',
+    {
+      config: { rateLimit: false },
+      schema: { tags: ['orders'], summary: 'Live order updates (text/event-stream)' },
+    },
+    async (req, reply) => {
+      const lastEventId = req.headers['last-event-id'];
+      openEventStream(
+        req,
+        reply,
+        (send) =>
+          opts.events.subscribeUser(
+            req.auth!.userId,
+            send,
+            typeof lastEventId === 'string' ? lastEventId : undefined,
+          ),
+        { onShutdown: (fn) => opts.events.onStop(fn) },
+      );
+    },
+  );
+
+  app.post(
+    '/:orderId/cancel',
+    {
+      schema: {
+        tags: ['orders'],
+        summary: 'Cancel my order (only before the stall starts preparing; paid UPI orders are refunded)',
+        params: z.object({ orderId: z.uuid('Not a valid order id') }),
+        response: { 200: z.object({ order: orderSchema }) },
+      },
+    },
+    async (req) => {
+      await cancelOrderByStudent(
+        app.db,
+        opts.gateway,
+        { orderId: req.params.orderId, userId: req.auth!.userId, now: now() },
+        req.log,
+      );
+      return {
+        order: toOrderResponse(
+          await getOrderForUser(app.db, req.params.orderId, req.auth!.userId),
+          opts.qrSecret,
+        ),
+      };
     },
   );
 

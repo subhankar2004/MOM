@@ -127,6 +127,14 @@ export const cartStore = {
     emit({ ...cart, note: note.slice(0, MAX_NOTE) });
   },
 
+  /** Replaces the whole cart (used by "Order again"). */
+  fill(stall: StallRef, lines: CartLine[]) {
+    const clean = lines
+      .map((l) => ({ ...l, quantity: Math.max(0, Math.min(MAX_QUANTITY, Math.floor(l.quantity))) }))
+      .filter((l) => l.quantity > 0);
+    emit({ stall: clean.length ? stall : null, lines: clean, note: '' });
+  },
+
   clear: () => emit(EMPTY),
 };
 

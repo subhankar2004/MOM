@@ -28,20 +28,25 @@ const { db, pool } = createDb(testDatabaseUrl(), { max: 10 });
 let app: FastifyInstance;
 let stallId: string;
 let itemId: string;
+let settingsId: number;
 const userIds: string[] = [];
 const cookies: Array<Record<string, string>> = [];
 const expectedTotal = calcFees(6000, 'cash', { platformFeeBps: 100, cashFeeBps: 500 }).totalPaise;
 
 beforeAll(async () => {
-  await db.insert(platformSettings).values({
-    platformFeeBps: 100,
-    cashFeeBps: 500,
-    maxOpenCashOrders: 2,
-    cashStrikeLimit: 3,
-    orderExpiryMinutes: 15,
-    congestionLowMaxMinutes: 10,
-    congestionModerateMaxMinutes: 20,
-  });
+  const [settings] = await db
+    .insert(platformSettings)
+    .values({
+      platformFeeBps: 100,
+      cashFeeBps: 500,
+      maxOpenCashOrders: 2,
+      cashStrikeLimit: 3,
+      orderExpiryMinutes: 15,
+      congestionLowMaxMinutes: 10,
+      congestionModerateMaxMinutes: 20,
+    })
+    .returning();
+  settingsId = settings!.id;
   const [stall] = await db
     .insert(stalls)
     .values({ slug: `rush-${Date.now()}`, name: 'Lunch Rush', status: 'active', isOpenOverride: true })
@@ -88,6 +93,7 @@ afterAll(async () => {
   await db.delete(menuCategories).where(eq(menuCategories.stallId, stallId));
   await db.delete(stalls).where(eq(stalls.id, stallId));
   await db.delete(users).where(inArray(users.id, userIds));
+  await db.delete(platformSettings).where(eq(platformSettings.id, settingsId));
   await pool.end();
 });
 

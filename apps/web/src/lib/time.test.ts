@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { closingSoonLabel, formatTime, opensLabel } from './time';
+import { closingSoonLabel, formatTime, opensLabel, orderDateLabel } from './time';
 
 const ist = (wallClock: string) => new Date(`${wallClock.replace(' ', 'T')}:00+05:30`);
 
@@ -36,4 +36,14 @@ describe('closingSoonLabel', () => {
     expect(closingSoonLabel(ist('2026-11-16 21:30'), now)).toBe('Closes in 20 min'));
   it('later than an hour', () => expect(closingSoonLabel(ist('2026-11-16 23:30'), now)).toBeNull());
   it('no closing time', () => expect(closingSoonLabel(null, now)).toBeNull());
+});
+
+describe('orderDateLabel', () => {
+  const now = new Date('2026-11-18T14:00:00+05:30');
+  it('today, yesterday, then a date — in India time', () => {
+    expect(orderDateLabel(new Date('2026-11-18T13:05:00+05:30'), now)).toBe('Today, 1:05 PM');
+    expect(orderDateLabel(new Date('2026-11-17T20:00:00+05:30'), now)).toBe('Yesterday, 8 PM');
+    // 23:30 IST on the 12th is still the 12th in India even though it's the 12th 18:00 UTC.
+    expect(orderDateLabel(new Date('2026-11-12T23:30:00+05:30'), now)).toBe('12 Nov, 11:30 PM');
+  });
 });

@@ -16,6 +16,7 @@ import { ACCESS_COOKIE } from '../auth/cookies.js';
 import { signAccessToken } from '../auth/tokens.js';
 import { recordOrderFees } from '../finance/ledger.js';
 import { istDay } from './orders.service.js';
+import { verifyPickupQr } from './pickup-qr.js';
 
 /** Monday 16 Nov 2026, 12:00 IST. */
 const NOON = new Date('2026-11-16T12:00:00+05:30');
@@ -308,5 +309,16 @@ describe('ledger', () => {
     // Placing an order alone writes nothing: money is recorded only once confirmed (#15/#21).
     const upi = (await place({ paymentMethod: 'upi' })).json().order;
     expect(await app.db.select().from(ledgerEntries).where(eq(ledgerEntries.orderId, upi.id))).toEqual([]);
+  });
+});
+
+describe('pickup QR in the order', () => {
+  it('a placed order carries a signed QR for itself; an unpaid UPI order has none', async () => {
+    const { place } = await world();
+    const cash = (await place()).json().order;
+    expect(cash.pickupQr).toMatch(/^MOM1\./);
+    expect(verifyPickupQr(testEnv().QR_SECRET, cash.pickupQr)).toBe(cash.id);
+    const upi = (await place({ paymentMethod: 'upi' })).json().order;
+    expect(upi.pickupQr).toBeNull();
   });
 });

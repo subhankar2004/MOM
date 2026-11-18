@@ -1,7 +1,8 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { badRequest } from '../../lib/errors.js';
-import { getOrderForUser, placeOrder } from './orders.service.js';
+import { getOrderForUser, placeOrder, type OrderView } from './orders.service.js';
+import { pickupQrPayload } from './pickup-qr.js';
 
 export const orderSchema = z.object({
   id: z.uuid(),
@@ -22,6 +23,8 @@ export const orderSchema = z.object({
   tokenDay: z.string().nullable(),
   /** Shown only to the order's owner, who says it at the counter (spec §5). */
   pickupCode: z.string(),
+  /** Signed QR payload to show at the counter, while the order is waiting to be collected. */
+  pickupQr: z.string().nullable(),
   note: z.string().nullable(),
   items: z.array(
     z.object({
@@ -42,11 +45,22 @@ export const orderSchema = z.object({
   expiresAt: z.date().nullable(),
 });
 
+const QR_STATUSES = new Set(['placed', 'preparing', 'ready']);
+
+/** The order as sent to its owner, with the pickup QR when it can be used. */
+export function toOrderResponse(order: OrderView, qrSecret: string) {
+  return {
+    ...order,
+    pickupQr: order.tokenNo && QR_STATUSES.has(order.status) ? pickupQrPayload(qrSecret, order.id) : null,
+  };
+}
+
 /** /v1/orders — a signed-in user's own orders. */
-export const ordersRoutes: FastifyPluginAsyncZod<{ now?: () => Date; upiOnline: boolean }> = async (
-  app,
-  opts,
-) => {
+export const ordersRoutes: FastifyPluginAsyncZod<{
+  now?: () => Date;
+  upiOnline: boolean;
+  qrSecret: string;
+}> = async (app, opts) => {
   const now = opts.now ?? (() => new Date());
   app.addHook('preHandler', app.requireAuth);
 
@@ -100,7 +114,7 @@ export const ordersRoutes: FastifyPluginAsyncZod<{ now?: () => Date; upiOnline: 
         },
         now(),
       );
-      return reply.status(replayed ? 200 : 201).send({ order });
+      return reply.status(replayed ? 200 : 201).send({ order: toOrderResponse(order, opts.qrSecret) });
     },
   );
 
@@ -114,6 +128,11 @@ export const ordersRoutes: FastifyPluginAsyncZod<{ now?: () => Date; upiOnline: 
         response: { 200: z.object({ order: orderSchema }) },
       },
     },
-    async (req) => ({ order: await getOrderForUser(app.db, req.params.orderId, req.auth!.userId) }),
+    async (req) => ({
+      order: toOrderResponse(
+        await getOrderForUser(app.db, req.params.orderId, req.auth!.userId),
+        opts.qrSecret,
+      ),
+    }),
   );
 };

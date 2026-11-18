@@ -13,6 +13,8 @@ export interface Order {
   tokenNo: number | null;
   tokenDay: string | null;
   pickupCode: string;
+  /** Signed QR to show at the counter while waiting to collect; null otherwise. */
+  pickupQr: string | null;
   note: string | null;
   items: Array<{
     itemId: string;

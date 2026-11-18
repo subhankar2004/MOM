@@ -163,12 +163,13 @@ export async function buildApp({
         }),
       });
       await v1.register(cartRoutes, { prefix: '/cart', now, upiOnline });
-      await v1.register(ordersRoutes, { prefix: '/orders', now, upiOnline });
+      await v1.register(ordersRoutes, { prefix: '/orders', now, upiOnline, qrSecret: env.QR_SECRET });
       if (gateway && env.RAZORPAY_KEY_SECRET) {
         await v1.register(paymentsRoutes, {
           prefix: '/payments',
           gateway,
           keySecret: env.RAZORPAY_KEY_SECRET,
+          qrSecret: env.QR_SECRET,
           now,
         });
         if (env.RAZORPAY_WEBHOOK_SECRET) {

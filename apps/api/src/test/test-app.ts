@@ -16,6 +16,7 @@ export function testEnv(overrides: Record<string, string> = {}): Env {
     PUBLIC_IMAGE_BASE_URL: 'http://localhost:8333/mom-images',
     JWT_SECRET: 'test-jwt-secret-that-is-long-enough-0123456789',
     OTP_PEPPER: 'test-otp-pepper-that-is-long-enough-9876543210',
+    QR_SECRET: 'test-qr-secret-that-is-long-enough-0011223344',
     // Offline payment gateway: no network in tests.
     PAYMENTS_PROVIDER: 'fake',
     RAZORPAY_KEY_ID: 'rzp_test_fakekey123',

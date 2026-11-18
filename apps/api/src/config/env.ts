@@ -76,6 +76,8 @@ const envSchema = z
     JWT_SECRET: secret,
     /** Key for hashing OTP codes before they are stored (HMAC-SHA256). */
     OTP_PEPPER: secret,
+    /** Signs pickup QR codes (spec §5) so they can't be forged (#16). */
+    QR_SECRET: secret,
     /** Send cookies only over HTTPS. Defaults to on, except in development/test (http://localhost). */
     COOKIE_SECURE: z.stringbool().optional(),
     /** Share cookies between api.<domain> and <domain>, e.g. ".mom.example". Unset locally. */
@@ -171,6 +173,13 @@ const envSchema = z
     }
     if (env.JWT_SECRET === env.OTP_PEPPER) {
       ctx.addIssue({ code: 'custom', path: ['OTP_PEPPER'], message: 'must be different from JWT_SECRET' });
+    }
+    if (env.QR_SECRET === env.JWT_SECRET || env.QR_SECRET === env.OTP_PEPPER) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['QR_SECRET'],
+        message: 'must be different from the other secrets',
+      });
     }
     if (Boolean(env.S3_ACCESS_KEY_ID) !== Boolean(env.S3_SECRET_ACCESS_KEY)) {
       ctx.addIssue({

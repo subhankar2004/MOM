@@ -72,6 +72,12 @@ category chips that follow the scroll, dish rows (photo, veg mark, price, Add / 
 sheet, "Sold out" dishes that can't be added, and a banner when the stall is closed or paused. One
 stall per cart: adding from another stall asks first. A 50-dish menu is tested at 4× CPU slowdown.
 
+**Token & QR (#16):** placed orders carry a signed pickup QR `MOM1.<orderId>.<sig>` (HMAC-SHA256 with
+`QR_SECRET`, 128-bit, ≈64 chars → a small, quickly scanned code); `verifyPickupQr()` is what the stall
+scanner uses (#21). The order screen shows the token ticket, the QR (black on white, also in dark
+mode), the pickup code, a Placed → Preparing → Ready → Collected stepper, keeps the screen awake while
+the QR shows, and offers "Add to home screen" once on phones.
+
 **Payments (#15):** Razorpay (no SDK; REST + Checkout). Paying creates a Razorpay order (reused on a
 second tap); success is accepted only with a valid HMAC signature, and the same `confirmPayment()`
 serves the browser and the webhook (first one wins, the other is a no-op): payment captured → token →

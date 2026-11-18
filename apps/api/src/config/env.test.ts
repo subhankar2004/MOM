@@ -7,6 +7,7 @@ const base = {
   PUBLIC_IMAGE_BASE_URL: 'http://localhost:8333/mom-images',
   JWT_SECRET: 'j'.repeat(40),
   OTP_PEPPER: 'p'.repeat(40),
+  QR_SECRET: 'q'.repeat(40),
 };
 
 /** What production needs on top of `base`: real SMS with India DLT ids. */

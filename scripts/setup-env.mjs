@@ -18,7 +18,7 @@ for (const [example, target] of files) {
 }
 
 // Secrets the API needs. Generated per machine; they never leave your computer.
-const SECRETS = ['JWT_SECRET', 'OTP_PEPPER'];
+const SECRETS = ['JWT_SECRET', 'OTP_PEPPER', 'QR_SECRET'];
 const apiEnv = 'apps/api/.env';
 let text = readFileSync(apiEnv, 'utf8');
 for (const name of SECRETS) {

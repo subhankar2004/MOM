@@ -20,6 +20,7 @@ import { razorpayWebhookRoutes } from './modules/payments/webhooks.routes.js';
 import { EventHub } from './modules/events/event-hub.js';
 import { stallsRoutes } from './modules/stalls/stalls.routes.js';
 import { StallsService } from './modules/stalls/stalls.service.js';
+import { reportsRoutes } from './modules/vendor/reports.routes.js';
 import { stallSettingsRoutes } from './modules/vendor/stall-settings.routes.js';
 import { StallSettingsService } from './modules/vendor/stall-settings.service.js';
 import { vendorOrdersRoutes } from './modules/vendor/vendor-orders.routes.js';
@@ -232,6 +233,7 @@ export async function buildApp({
         }),
         onChange: () => stallsService.invalidate(),
       });
+      await v1.register(reportsRoutes, { prefix: '/vendor', now });
       await v1.register(adminAccessRoutes, { prefix: '/admin' });
     },
     { prefix: '/v1' },

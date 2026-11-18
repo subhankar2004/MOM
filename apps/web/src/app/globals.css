@@ -32,6 +32,9 @@
   --danger-soft: #fbe5e3;
   --focus: #2b3484;
   --overlay: rgb(15 18 48 / 0.45);
+  /* Chart series (validated for colour-blind separation and lightness on this surface). */
+  --chart-upi: #3d47b0;
+  --chart-cash: #b97f00;
 }
 
 [data-theme='dark'] {
@@ -58,9 +61,13 @@
   --danger-soft: #3d1d22;
   --focus: #f5b700;
   --overlay: rgb(0 0 0 / 0.6);
+  --chart-upi: #7880dc;
+  --chart-cash: #b88600;
 }
 
 @theme inline {
+  --color-chart-upi: var(--chart-upi);
+  --color-chart-cash: var(--chart-cash);
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);

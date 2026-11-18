@@ -144,6 +144,20 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # Menu photos are uploaded to S3; locally and here that's SeaweedFS (docker-compose.yml).
+      # A plain `docker run`, because service containers can't be given a command.
+      - name: Start S3 storage (SeaweedFS)
+        run: |
+          docker run -d --name mom_s3 -p 127.0.0.1:8333:8333 \
+            -v "$PWD/docker/s3/s3.json:/etc/mom/s3.json:ro" \
+            chrislusf/seaweedfs:4.54 mini -dir=/data -bucket=mom-images \
+            -s3.config=/etc/mom/s3.json -admin.ui=false
+          for i in $(seq 1 60); do
+            curl -fsS -o /dev/null http://127.0.0.1:8333/healthz && exit 0
+            sleep 1
+          done
+          docker logs mom_s3
+          exit 1
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Build the web app, start the API, run the browser tests

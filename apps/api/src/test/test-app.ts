@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../app.js';
 import { loadEnv, type Env } from '../config/env.js';
 import { createDb, type Db } from '../db/client.js';
+import { FakeImageStorage } from '../modules/menu/image-storage.js';
 import type { SmsMessage, SmsProvider } from '../sms/index.js';
 import { testDatabaseUrl } from './test-db.js';
 
@@ -32,6 +33,8 @@ export interface TestApp {
   db: Db;
   /** Every SMS the app "sent" during the test (nothing really leaves the machine). */
   sms: SmsMessage[];
+  /** Menu photos "uploaded" during the test. */
+  images: FakeImageStorage;
   /** Closes the app and rolls back everything the test (and the app) wrote. */
   close: () => Promise<void>;
 }
@@ -76,6 +79,7 @@ export async function createTestApp(
       sms.push(message);
     },
   };
+  const images = new FakeImageStorage();
   const app = await buildApp({
     env: testEnv(envOverrides),
     db: tx,
@@ -83,6 +87,7 @@ export async function createTestApp(
     sms: captureSms,
     now: options.now,
     stallsCacheTtlMs: 0,
+    imageStorage: images,
   });
   await app.ready();
 
@@ -90,6 +95,7 @@ export async function createTestApp(
     app,
     db: tx,
     sms,
+    images,
     close: async () => {
       await app.close();
       endTest();

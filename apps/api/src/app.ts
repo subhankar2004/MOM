@@ -10,6 +10,7 @@ import { AuthService } from './modules/auth/auth.service.js';
 import { adminAccessRoutes } from './modules/admin/members.routes.js';
 import { meRoutes } from './modules/auth/me.routes.js';
 import { cartRoutes } from './modules/cart/cart.routes.js';
+import { ordersRoutes } from './modules/orders/orders.routes.js';
 import { stallsRoutes } from './modules/stalls/stalls.routes.js';
 import { StallsService } from './modules/stalls/stalls.service.js';
 import { vendorRoutes } from './modules/vendor/vendor.routes.js';
@@ -150,6 +151,7 @@ export async function buildApp({
         }),
       });
       await v1.register(cartRoutes, { prefix: '/cart', now });
+      await v1.register(ordersRoutes, { prefix: '/orders', now });
       await v1.register(vendorRoutes, { prefix: '/vendor' });
       await v1.register(adminAccessRoutes, { prefix: '/admin' });
     },

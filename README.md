@@ -72,6 +72,13 @@ category chips that follow the scroll, dish rows (photo, veg mark, price, Add / 
 sheet, "Sold out" dishes that can't be added, and a banner when the stall is closed or paused. One
 stall per cart: adding from another stall asks first. A 50-dish menu is tested at 4× CPU slowdown.
 
+**Orders (#14):** one transaction: lock the student, re-price, refuse if the total differs from
+what was shown, check stall/method/cash limits (2 open cash orders, strikes), snapshot fees, create
+the order, and for cash issue the day's next token (atomic counter per stall and IST day) and a
+4-digit pickup code. Retries with the same key return the same order (also under a race).
+Ordering is rate-limited per student, not per IP (campus Wi-Fi shares IPs). Tested with 50
+simultaneous orders → tokens 1…50.
+
 **Cart (#13):** one stall per cart, saved in `localStorage` (survives reloads, synced across tabs),
 note for the stall; floating "N items · ₹X — View cart" bar; `/cart` re-prices through the server on
 every change, shows price changes (old → new, "Accept new prices"), sold-out/removed dishes to remove,
@@ -90,20 +97,21 @@ silent refresh, axe WCAG 2.1 AA checks in both themes, no sideways scroll at 360
 
 Fastify 5 + Zod. `npm run dev` serves it on <http://localhost:4000>:
 
-| Path                                            | Purpose                                                                                                                          |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /health`                                   | liveness (process is up)                                                                                                         |
-| `GET /ready`                                    | readiness: 200 if Postgres answers, 503 if not (load balancer uses it)                                                           |
-| `/docs`                                         | interactive OpenAPI docs (not served in production)                                                                              |
-| `POST /v1/auth/otp/request`, `/otp/verify`      | phone OTP login (sets httpOnly session cookies)                                                                                  |
-| `POST /v1/auth/refresh`, `/logout`              | rotate / end the session                                                                                                         |
-| `GET`, `PATCH`, `DELETE /v1/me`                 | the signed-in user (name; account deletion)                                                                                      |
-| `GET /v1/stalls`, `/v1/stalls/:slug`            | public: stalls with open/paused/closed, wait time + busy level, payment methods                                                  |
-| `GET /v1/stalls/:slug/menu`                     | public: categories → dishes (sold-out flagged; deleted and empty hidden)                                                         |
-| `POST /v1/cart/quote`                           | public: re-price a cart from the database → per-line status (ok, price changed, sold out, removed), UPI and cash bills, problems |
-| `GET /v1/vendor/stalls`, `/stalls/:stallId`     | stall console: my stalls (members) / all (super admin)                                                                           |
-| `POST`, `GET /v1/admin/stalls/:stallId/members` | super admin: register a stall owner's phone, list members + pending                                                              |
-| `POST /v1/admin/users/:userId/suspension`       | super admin: suspend (ends all sessions) or reactivate                                                                           |
+| Path                                                          | Purpose                                                                                                                          |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /health`                                                 | liveness (process is up)                                                                                                         |
+| `GET /ready`                                                  | readiness: 200 if Postgres answers, 503 if not (load balancer uses it)                                                           |
+| `/docs`                                                       | interactive OpenAPI docs (not served in production)                                                                              |
+| `POST /v1/auth/otp/request`, `/otp/verify`                    | phone OTP login (sets httpOnly session cookies)                                                                                  |
+| `POST /v1/auth/refresh`, `/logout`                            | rotate / end the session                                                                                                         |
+| `GET`, `PATCH`, `DELETE /v1/me`                               | the signed-in user (name; account deletion)                                                                                      |
+| `GET /v1/stalls`, `/v1/stalls/:slug`                          | public: stalls with open/paused/closed, wait time + busy level, payment methods                                                  |
+| `GET /v1/stalls/:slug/menu`                                   | public: categories → dishes (sold-out flagged; deleted and empty hidden)                                                         |
+| `POST /v1/cart/quote`                                         | public: re-price a cart from the database → per-line status (ok, price changed, sold out, removed), UPI and cash bills, problems |
+| `POST /v1/orders` (+ `Idempotency-Key`), `GET /v1/orders/:id` | signed in: place an order (cash → token now; UPI → pending payment), view my order                                               |
+| `GET /v1/vendor/stalls`, `/stalls/:stallId`                   | stall console: my stalls (members) / all (super admin)                                                                           |
+| `POST`, `GET /v1/admin/stalls/:stallId/members`               | super admin: register a stall owner's phone, list members + pending                                                              |
+| `POST /v1/admin/users/:userId/suspension`                     | super admin: suspend (ends all sessions) or reactivate                                                                           |
 
 **Login (#7):** 6-digit SMS codes stored only as HMAC hashes, valid 5 min, 5 tries, 30 s resend
 cooldown, 5 codes per phone and 30 per IP per hour. Sessions: 15-min JWT access cookie + 30-day

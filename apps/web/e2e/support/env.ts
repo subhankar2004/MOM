@@ -27,6 +27,9 @@ export const PHONES = {
   flowSignOut: phone(15),
   flowChange: phone(16),
   flowAdmin: phone(17),
+  // one fresh student per Playwright project for ordering tests (cash-order limits are per student)
+  orderPhone360: phone(40),
+  orderDesktop: phone(41),
 } as const;
 
 export const STORAGE = {

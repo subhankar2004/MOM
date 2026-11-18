@@ -18,7 +18,14 @@ export type ApiErrorCode =
   | 'OTP_EXPIRED'
   | 'OTP_TOO_MANY_ATTEMPTS'
   | 'SESSION_EXPIRED'
-  | 'ACCOUNT_SUSPENDED';
+  | 'ACCOUNT_SUSPENDED'
+  // Ordering (#14)
+  | 'CART_CHANGED'
+  | 'STALL_UNAVAILABLE'
+  | 'PAYMENT_METHOD_UNAVAILABLE'
+  | 'CASH_LIMIT_REACHED'
+  | 'CASH_BLOCKED'
+  | 'IDEMPOTENCY_MISMATCH';
 
 /** The signed-in user as returned by the API (/v1/me, login, refresh). */
 export interface MeResponse {

@@ -1,8 +1,13 @@
 import type { Metadata } from 'next';
-import { ComingSoon } from '@/components/coming-soon';
+import { RequireRole } from '@/components/auth/require-role';
+import { CheckoutView } from './checkout-view';
 
 export const metadata: Metadata = { title: 'Checkout' };
 
 export default function CheckoutPage() {
-  return <ComingSoon title="Checkout" issue={14} description="Choose UPI or cash and place your order." />;
+  return (
+    <RequireRole area="student">
+      <CheckoutView />
+    </RequireRole>
+  );
 }

@@ -73,18 +73,23 @@ export function createTestStall(
     opensInMinutes?: number;
     avgPrepMinutes?: number;
     parallelCapacity?: number;
+    /** Accept UPI (Razorpay Route account activated). */
+    upi?: boolean;
   } = {},
 ) {
   return withDb(async (db) => {
     const { rows } = await db.query<{ id: string }>(
-      `insert into stalls (slug, name, status, is_open_override, avg_prep_minutes, parallel_capacity, cuisine_tags)
-       values ($1, $2, 'active', $3, $4, $5, '{Test}') returning id`,
+      `insert into stalls (slug, name, status, is_open_override, avg_prep_minutes, parallel_capacity, cuisine_tags,
+                           upi_enabled, route_status)
+       values ($1, $2, 'active', $3, $4, $5, '{Test}', $6, $7) returning id`,
       [
         slug,
         `Test ${slug.replace(/^e2e-/, '')}`,
         options.open ? true : null,
         options.avgPrepMinutes ?? 10,
         options.parallelCapacity ?? 1,
+        options.upi ?? false,
+        options.upi ? 'activated' : 'not_started',
       ],
     );
     const id = rows[0]!.id;
@@ -147,4 +152,20 @@ export function addMenu(stallId: string, menu: Array<[string, Array<[string, num
       }
     }
   });
+}
+
+/** Changes a dish the way a stall owner would (price in ₹, availability). */
+export function updateDish(stallId: string, name: string, change: { rupees?: number; available?: boolean }) {
+  return withDb((db) =>
+    db.query(
+      `update menu_items set price_paise = coalesce($3, price_paise), is_available = coalesce($4, is_available)
+       where stall_id = $1 and name = $2`,
+      [stallId, name, change.rupees === undefined ? null : change.rupees * 100, change.available ?? null],
+    ),
+  );
+}
+
+/** Opens or closes a stall with the vendor switch (true/false), or back to its hours (null). */
+export function setStallOpen(stallId: string, open: boolean | null) {
+  return withDb((db) => db.query(`update stalls set is_open_override = $2 where id = $1`, [stallId, open]));
 }

@@ -72,6 +72,16 @@ category chips that follow the scroll, dish rows (photo, veg mark, price, Add / 
 sheet, "Sold out" dishes that can't be added, and a banner when the stall is closed or paused. One
 stall per cart: adding from another stall asks first. A 50-dish menu is tested at 4× CPU slowdown.
 
+**Stall settings (#20):** `/vendor/settings` (owners only). Open or closed: Follow hours / Open
+now / Closed now (the override resets at midnight IST) and a "Take new orders" pause switch, with a
+plain-words status line. Payment methods: UPI can only be switched on once the Razorpay settlement
+account is `activated` (otherwise "Settlement account pending"), and at least one way to pay must
+stay on. Weekly hours editor (several slots a day, overnight slots, "Use for every day"; overlaps
+refused, including Sunday night into Monday). Kitchen speed (prep minutes, orders at once) feeds the
+wait-time meter. Stall photo (same signed upload as dishes, `stalls/<id>/cover/`), description and
+location. Every change is audited and clears the public stall-list cache, so students see it on
+their next load; checkout greys out a payment method the stall turned off.
+
 **Menu editor (#19):** `/vendor/menu` (stall owners only; counter staff see a note). Categories:
 add, rename, reorder, delete when empty. Dishes: name, description, price in ₹, veg/non-veg, photo,
 availability switch on every row, reorder, soft delete; "Mark all available" in one tap. Price
@@ -160,6 +170,7 @@ Fastify 5 + Zod. `npm run dev` serves it on <http://localhost:4000>:
 | `POST /v1/vendor/stalls/:stallId/orders/:orderId/accept`, `/ready`, `/reject`                                                       | stall: move an order along; reject needs a reason and refunds paid UPI orders                                                    |
 | `GET /v1/vendor/stalls/:stallId/menu`; `POST /categories`, `PATCH`/`DELETE /categories/:id`, `PUT /categories/order`                | stall owner: the menu editor; categories (delete only when empty; reorder sends every id)                                        |
 | `POST /v1/vendor/stalls/:stallId/items`, `PATCH`/`DELETE /items/:id`, `PUT /categories/:id/items/order`, `POST /items/availability` | stall owner: dishes (price changes audited; soft delete); bulk available / sold out                                              |
+| `GET`, `PATCH /v1/vendor/stalls/:stallId/settings`; `PUT /hours`                                                                    | stall owner: open/close/pause, payment methods, prep time, capacity, photo, details; replace weekly hours (all audited)          |
 | `POST /v1/vendor/stalls/:stallId/uploads/presign`                                                                                   | stall owner: a 5-minute signed PUT into the stall's photo folder (WebP/JPEG/PNG, ≤ 2 MB)                                         |
 | `GET /v1/vendor/stalls`, `/stalls/:stallId`                                                                                         | stall console: my stalls (members) / all (super admin)                                                                           |
 | `POST`, `GET /v1/admin/stalls/:stallId/members`                                                                                     | super admin: register a stall owner's phone, list members + pending                                                              |

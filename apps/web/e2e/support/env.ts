@@ -47,6 +47,11 @@ export const PHONES = {
   // stall owners for the menu-editor tests
   menuVendor360: phone(52),
   menuVendorDesktop: phone(53),
+  // stall settings tests: a student who checks out, and the stall's owner
+  settingsPhone360: phone(54),
+  settingsDesktop: phone(55),
+  settingsVendor360: phone(56),
+  settingsVendorDesktop: phone(57),
 } as const;
 
 export const STORAGE = {

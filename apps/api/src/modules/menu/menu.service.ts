@@ -3,7 +3,7 @@ import type { Db } from '../../db/client.js';
 import { menuCategories, menuItems } from '../../db/schema/index.js';
 import { audit } from '../../lib/audit.js';
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
-import { IMAGE_TYPES, isStallImageKey, MAX_IMAGE_BYTES, type ImageStorage } from './image-storage.js';
+import { assertUploadedImage, type ImageStorage } from './image-storage.js';
 
 type ItemRow = typeof menuItems.$inferSelect;
 
@@ -321,15 +321,8 @@ export class MenuService {
 
   // ── Helpers ─────────────────────────────────────────────────────────────
 
-  /** The photo must be one this stall uploaded, and really be a small image. */
-  private async checkImage(stallId: string, key: string) {
-    if (!isStallImageKey(stallId, key)) throw badRequest("That photo doesn't belong to this stall");
-    const object = await this.storage.head(key);
-    if (!object) throw badRequest('The photo has not finished uploading; try again');
-    if (object.size > MAX_IMAGE_BYTES) throw badRequest('Photos must be 2 MB or smaller');
-    if (!object.contentType || !(object.contentType in IMAGE_TYPES)) {
-      throw badRequest('Photos must be WebP, JPEG or PNG');
-    }
+  private checkImage(stallId: string, key: string) {
+    return assertUploadedImage(this.storage, stallId, key, 'items');
   }
 
   /** Best effort: a leftover photo costs a few KB, a failed save would cost the vendor's edit. */

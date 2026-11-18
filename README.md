@@ -72,6 +72,16 @@ category chips that follow the scroll, dish rows (photo, veg mark, price, Add / 
 sheet, "Sold out" dishes that can't be added, and a banner when the stall is closed or paused. One
 stall per cart: adding from another stall asks first. A 50-dish menu is tested at 4× CPU slowdown.
 
+**Live status & My orders (#17):** a Postgres trigger sends `NOTIFY mom_orders` whenever an order's
+status, payment or token changes; each API process holds one `LISTEN` connection and fans changes out
+over Server-Sent Events (`GET /v1/orders/events`) to the student (and, from #18, the stall). Events
+carry ids: a browser that reconnects with `Last-Event-ID` gets what it missed, otherwise it is told
+to resync and refetches. A heartbeat every 25 s keeps proxies from closing the stream (**the AWS load
+balancer's idle timeout must be above 25 s**, #28). `/orders` shows active orders live and past ones
+(keyset-paginated, "Order again" refills the cart, the cart page re-checks prices). When an order
+turns ready the token screen goes full green with a buzz and chime and the tab title flashes; on other
+pages a notice pops up. Students can cancel until the stall starts preparing (paid UPI → refunded).
+
 **Token & QR (#16):** placed orders carry a signed pickup QR `MOM1.<orderId>.<sig>` (HMAC-SHA256 with
 `QR_SECRET`, 128-bit, ≈64 chars → a small, quickly scanned code); `verifyPickupQr()` is what the stall
 scanner uses (#21). The order screen shows the token ticket, the QR (black on white, also in dark
@@ -123,6 +133,9 @@ Fastify 5 + Zod. `npm run dev` serves it on <http://localhost:4000>:
 | `GET /v1/stalls/:slug/menu`                                   | public: categories → dishes (sold-out flagged; deleted and empty hidden)                                                         |
 | `POST /v1/cart/quote`                                         | public: re-price a cart from the database → per-line status (ok, price changed, sold out, removed), UPI and cash bills, problems |
 | `POST /v1/orders` (+ `Idempotency-Key`), `GET /v1/orders/:id` | signed in: place an order (cash → token now; UPI → pending payment), view my order                                               |
+| `GET /v1/orders?scope=active\|past&before=<orderId>`          | signed in: my orders — in progress, or finished (newest first, 20 per page)                                                      |
+| `GET /v1/orders/events`                                       | signed in: live changes to my orders (text/event-stream, resumes with `Last-Event-ID`)                                           |
+| `POST /v1/orders/:id/cancel`                                  | signed in: cancel before the stall starts preparing; a paid UPI order is refunded                                                |
 | `POST /v1/payments/razorpay/order`, `/verify`                 | signed in: start paying a UPI order; verify Razorpay's signature → token                                                         |
 | `POST /v1/webhooks/razorpay`                                  | Razorpay → MOM (signed): confirms payments even if the browser closed; de-duplicated                                             |
 | `GET /v1/vendor/stalls`, `/stalls/:stallId`                   | stall console: my stalls (members) / all (super admin)                                                                           |

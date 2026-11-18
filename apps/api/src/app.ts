@@ -14,6 +14,7 @@ import { ordersRoutes } from './modules/orders/orders.routes.js';
 import { createPaymentGateway, type PaymentGateway } from './modules/payments/gateway.js';
 import { paymentsRoutes } from './modules/payments/payments.routes.js';
 import { razorpayWebhookRoutes } from './modules/payments/webhooks.routes.js';
+import { EventHub } from './modules/events/event-hub.js';
 import { stallsRoutes } from './modules/stalls/stalls.routes.js';
 import { StallsService } from './modules/stalls/stalls.service.js';
 import { vendorRoutes } from './modules/vendor/vendor.routes.js';
@@ -30,6 +31,8 @@ declare module 'fastify' {
     db: Db;
     /** Payment gateway (Razorpay), or null when UPI isn't configured. */
     paymentGateway: PaymentGateway | null;
+    /** Live order updates (Postgres LISTEN/NOTIFY → SSE). */
+    events: EventHub;
     env: Env;
   }
 }
@@ -47,6 +50,8 @@ export interface BuildAppOptions {
   stallsCacheTtlMs?: number;
   /** Override the payment gateway (tests). Defaults to Razorpay from env, or none. */
   gateway?: PaymentGateway | null;
+  /** Live updates hub. server.ts connects it to Postgres; tests can publish directly. */
+  events?: EventHub;
 }
 
 /** Accepts an incoming X-Request-Id only if it looks like an id (prevents log injection). */
@@ -83,6 +88,7 @@ export async function buildApp({
   now,
   stallsCacheTtlMs,
   gateway: gatewayOverride,
+  events: eventsOverride,
 }: BuildAppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: logger ?? loggerOptions(env),
@@ -142,6 +148,12 @@ export async function buildApp({
   const gateway = gatewayOverride === undefined ? createPaymentGateway(env) : gatewayOverride;
   const upiOnline = gateway !== null && upiConfigured(env);
   app.decorate('paymentGateway', gateway);
+  const events = eventsOverride ?? new EventHub(app.log);
+  app.decorate('events', events);
+  // preClose: end live streams before the server waits for connections to finish.
+  app.addHook('preClose', async () => {
+    await events.stop();
+  });
 
   // Versioned business API.
   await app.register(
@@ -163,7 +175,14 @@ export async function buildApp({
         }),
       });
       await v1.register(cartRoutes, { prefix: '/cart', now, upiOnline });
-      await v1.register(ordersRoutes, { prefix: '/orders', now, upiOnline, qrSecret: env.QR_SECRET });
+      await v1.register(ordersRoutes, {
+        prefix: '/orders',
+        now,
+        upiOnline,
+        qrSecret: env.QR_SECRET,
+        events,
+        gateway,
+      });
       if (gateway && env.RAZORPAY_KEY_SECRET) {
         await v1.register(paymentsRoutes, {
           prefix: '/payments',

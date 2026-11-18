@@ -41,3 +41,12 @@ export function closingSoonLabel(closesAt: Date | null, now: Date): string | nul
   const minutes = Math.ceil((closesAt.getTime() - now.getTime()) / 60_000);
   return minutes > 0 && minutes <= 60 ? `Closes in ${minutes} min` : null;
 }
+
+const shortDateFmt = new Intl.DateTimeFormat('en-IN', { timeZone: IST, day: 'numeric', month: 'short' });
+
+/** When an order was placed: "Today, 1:05 PM" · "Yesterday, 8 PM" · "12 Nov, 9:30 AM". */
+export function orderDateLabel(date: Date, now: Date): string {
+  const diff = istDayDiff(date, now);
+  const day = diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : shortDateFmt.format(date);
+  return `${day}, ${formatTime(date)}`;
+}

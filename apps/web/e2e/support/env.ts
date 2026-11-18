@@ -37,6 +37,8 @@ export const PHONES = {
   upiDesktop: phone(43),
   qrPhone360: phone(44),
   qrDesktop: phone(45),
+  livePhone360: phone(46),
+  liveDesktop: phone(47),
 } as const;
 
 export const STORAGE = {

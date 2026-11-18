@@ -3,6 +3,7 @@
 import { formatBps, formatINR } from '@mom/shared';
 import { MapPin, ReceiptText } from 'lucide-react';
 import { useParams } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 import { ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -10,14 +11,17 @@ import { Spinner } from '@/components/ui/spinner';
 import { StatusChip } from '@/components/ui/status-chip';
 import { TokenTicket } from '@/components/ui/token-ticket';
 import { ApiError } from '@/lib/api-client';
-import { STATUS_LABEL, useOrder, type Order } from '@/lib/orders';
+import { canCancel, STATUS_LABEL, useOrder, type Order } from '@/lib/orders';
 import { AddToHomeHint } from '@/components/order/add-to-home-hint';
+import { CancelOrder } from '@/components/order/cancel-order';
+import { ReadyBanner } from '@/components/order/ready-banner';
+import { alertOrderReady, useTitleFlash } from '@/lib/ready-alert';
 import { PickupQr } from '@/components/order/pickup-qr';
 import { StatusStepper } from '@/components/order/status-stepper';
 import { useWakeLock } from '@/lib/use-wake-lock';
 import { PaymentPanel } from './payment-panel';
 
-/** The order and its token (QR code and live tracking arrive with #16 and #17). */
+/** The order and its token, QR code and live status. */
 export function OrderView() {
   const { id } = useParams<{ id: string }>();
   const order = useOrder(id);
@@ -48,9 +52,17 @@ export function OrderView() {
 function OrderDetails({ order: o }: { order: Order }) {
   // Keep the screen awake while the QR is showing (the student is walking to the counter).
   useWakeLock(o.pickupQr !== null);
+  // Buzz and chime when the order turns ready while this page is open (not on first load).
+  const previous = useRef(o.status);
+  useEffect(() => {
+    if (o.status === 'ready' && previous.current !== 'ready') alertOrderReady();
+    previous.current = o.status;
+  }, [o.status]);
+  useTitleFlash(o.status === 'ready' ? `Token #${o.tokenNo ?? ''} is ready!` : null);
   return (
     <div className="flex flex-col items-center gap-5">
       <h1 className="sr-only">Your order at {o.stall.name}</h1>
+      {o.status === 'ready' && <ReadyBanner token={o.tokenNo} stallName={o.stall.name} />}
       {o.tokenNo ? (
         <>
           <TokenTicket
@@ -113,6 +125,7 @@ function OrderDetails({ order: o }: { order: Order }) {
         </dl>
         {o.note && <p className="mt-3 text-sm text-ink-muted">Note: “{o.note}”</p>}
       </Card>
+      {canCancel(o.status) && <CancelOrder key={o.status} order={o} />}
       {o.pickupQr && <AddToHomeHint />}
       <ButtonLink href="/" variant="secondary">
         Back to stalls

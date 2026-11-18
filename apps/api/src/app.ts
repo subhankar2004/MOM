@@ -10,6 +10,9 @@ import { AuthService } from './modules/auth/auth.service.js';
 import { adminAccessRoutes } from './modules/admin/members.routes.js';
 import { meRoutes } from './modules/auth/me.routes.js';
 import { cartRoutes } from './modules/cart/cart.routes.js';
+import { createImageStorage, type ImageStorage } from './modules/menu/image-storage.js';
+import { menuRoutes } from './modules/menu/menu.routes.js';
+import { MenuService } from './modules/menu/menu.service.js';
 import { ordersRoutes } from './modules/orders/orders.routes.js';
 import { createPaymentGateway, type PaymentGateway } from './modules/payments/gateway.js';
 import { paymentsRoutes } from './modules/payments/payments.routes.js';
@@ -53,6 +56,8 @@ export interface BuildAppOptions {
   gateway?: PaymentGateway | null;
   /** Live updates hub. server.ts connects it to Postgres; tests can publish directly. */
   events?: EventHub;
+  /** Override where menu photos are stored (tests use an in-memory fake). Defaults to S3 from env. */
+  imageStorage?: ImageStorage;
 }
 
 /** Accepts an incoming X-Request-Id only if it looks like an id (prevents log injection). */
@@ -90,6 +95,7 @@ export async function buildApp({
   stallsCacheTtlMs,
   gateway: gatewayOverride,
   events: eventsOverride,
+  imageStorage,
 }: BuildAppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: logger ?? loggerOptions(env),
@@ -203,6 +209,13 @@ export async function buildApp({
       }
       await v1.register(vendorRoutes, { prefix: '/vendor' });
       await v1.register(vendorOrdersRoutes, { prefix: '/vendor', now, events, gateway });
+      const storage = imageStorage ?? createImageStorage(env);
+      await v1.register(menuRoutes, {
+        prefix: '/vendor',
+        now,
+        storage,
+        menu: new MenuService(db, storage, { publicImageBaseUrl: env.PUBLIC_IMAGE_BASE_URL }),
+      });
       await v1.register(adminAccessRoutes, { prefix: '/admin' });
     },
     { prefix: '/v1' },

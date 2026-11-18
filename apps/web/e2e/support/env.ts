@@ -44,6 +44,9 @@ export const PHONES = {
   // stall owners for the order-board tests (one per project, separate from the shared vendor)
   boardVendor360: phone(50),
   boardVendorDesktop: phone(51),
+  // stall owners for the menu-editor tests
+  menuVendor360: phone(52),
+  menuVendorDesktop: phone(53),
 } as const;
 
 export const STORAGE = {
@@ -61,7 +64,12 @@ export function apiEnv(): Record<string, string> {
     API_PORT: String(API_PORT),
     WEB_ORIGIN: WEB_URL,
     DATABASE_URL: E2E_DATABASE_URL,
+    // Local S3 (SeaweedFS from docker-compose.yml; CI starts the same container).
+    S3_ENDPOINT: 'http://127.0.0.1:8333',
     S3_BUCKET: 'mom-images',
+    S3_ACCESS_KEY_ID: 'mom-dev-access-key',
+    S3_SECRET_ACCESS_KEY: 'mom-dev-secret-key',
+    S3_FORCE_PATH_STYLE: 'true',
     PUBLIC_IMAGE_BASE_URL: 'http://127.0.0.1:8333/mom-images',
     JWT_SECRET: 'e2e-only-jwt-secret-0123456789-abcdefghij',
     OTP_PEPPER: 'e2e-only-otp-pepper-9876543210-abcdefghij',

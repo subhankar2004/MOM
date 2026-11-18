@@ -35,6 +35,8 @@ export const PHONES = {
   orderDesktop: phone(41),
   upiPhone360: phone(42),
   upiDesktop: phone(43),
+  qrPhone360: phone(44),
+  qrDesktop: phone(45),
 } as const;
 
 export const STORAGE = {
@@ -56,6 +58,7 @@ export function apiEnv(): Record<string, string> {
     PUBLIC_IMAGE_BASE_URL: 'http://127.0.0.1:8333/mom-images',
     JWT_SECRET: 'e2e-only-jwt-secret-0123456789-abcdefghij',
     OTP_PEPPER: 'e2e-only-otp-pepper-9876543210-abcdefghij',
+    QR_SECRET: 'e2e-only-qr-secret-0011223344-abcdefghij',
     SMS_TEST_PHONES: Object.values(PHONES).join(','),
     SMS_TEST_CODE: TEST_CODE,
     // The admin becomes super admin by signing in (bootstrap rule, #9).

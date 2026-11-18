@@ -2,7 +2,7 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { AppError } from '../../lib/errors.js';
 import { getOrderForUser } from '../orders/orders.service.js';
-import { orderSchema } from '../orders/orders.routes.js';
+import { orderSchema, toOrderResponse } from '../orders/orders.routes.js';
 import type { PaymentGateway } from './gateway.js';
 import { confirmPayment, refundOrder, startPayment } from './payments.service.js';
 import { verifyCheckoutSignature } from './signatures.js';
@@ -10,6 +10,7 @@ import { verifyCheckoutSignature } from './signatures.js';
 export interface PaymentsRoutesOptions {
   gateway: PaymentGateway;
   keySecret: string;
+  qrSecret: string;
   now?: () => Date;
 }
 
@@ -91,7 +92,9 @@ export const paymentsRoutes: FastifyPluginAsyncZod<PaymentsRoutesOptions> = asyn
           req.log,
         );
       }
-      return { order: await getOrderForUser(app.db, mine.id, req.auth!.userId) };
+      return {
+        order: toOrderResponse(await getOrderForUser(app.db, mine.id, req.auth!.userId), opts.qrSecret),
+      };
     },
   );
 };

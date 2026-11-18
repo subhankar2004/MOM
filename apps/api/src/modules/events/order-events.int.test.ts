@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../../app.js';
 import { createDb } from '../../db/client.js';
-import { orders, platformSettings, stalls, users } from '../../db/schema/index.js';
+import { orders, platformSettings, stallMembers, stalls, users } from '../../db/schema/index.js';
 import { testEnv } from '../../test/test-app.js';
 import { testDatabaseUrl } from '../../test/test-db.js';
 import { ACCESS_COOKIE } from '../auth/cookies.js';
@@ -21,6 +21,8 @@ const userIds: string[] = [];
 let orderId: string;
 let otherOrderId: string;
 let cookie: string;
+let vendorCookie: string;
+let newOrder: Record<string, unknown>;
 let settingsId: number;
 
 beforeAll(async () => {
@@ -43,14 +45,18 @@ beforeAll(async () => {
   stallId = stall!.id;
   settingsId = settings!.id;
   const tail = String(Date.now()).slice(-7);
-  const [me, other] = await db
+  const [me, other, vendor] = await db
     .insert(users)
     .values([
       { phone: `+91951${tail}`, name: 'Me' },
       { phone: `+91952${tail}`, name: 'Other' },
+      { phone: `+91953${tail}`, name: 'Vendor', role: 'vendor_owner' },
     ])
     .returning();
-  userIds.push(me!.id, other!.id);
+  userIds.push(me!.id, other!.id, vendor!.id);
+  await db.insert(stallMembers).values({ stallId, userId: vendor!.id, role: 'owner' });
+  const v = await signAccessToken(testEnv().JWT_SECRET, { userId: vendor!.id, role: 'vendor_owner' }, 900);
+  vendorCookie = `${ACCESS_COOKIE}=${v.token}`;
   const base0 = {
     stallId,
     status: 'placed' as const,
@@ -74,6 +80,7 @@ beforeAll(async () => {
     ])
     .returning();
   orderId = mine!.id;
+  newOrder = { ...base0, userId: other!.id, tokenNo: 3, idempotencyKey: `live-c-${tail}` };
   otherOrderId = theirs!.id;
   const { token } = await signAccessToken(testEnv().JWT_SECRET, { userId: me!.id, role: 'student' }, 900);
   cookie = `${ACCESS_COOKIE}=${token}`;
@@ -95,9 +102,9 @@ afterAll(async () => {
 });
 
 /** Opens the stream and returns a reader of parsed SSE frames. */
-async function openStream(headers: Record<string, string> = {}) {
+async function openStream(headers: Record<string, string> = {}, path = '/v1/orders/events') {
   const ctrl = new AbortController();
-  const res = await fetch(`${base}/v1/orders/events`, {
+  const res = await fetch(`${base}${path}`, {
     headers: { cookie, ...headers },
     signal: ctrl.signal,
   });
@@ -173,5 +180,24 @@ describe('GET /v1/orders/events', () => {
     const lost = await openStream({ 'last-event-id': 'nope' });
     await lost.waitFor((f) => f.event === 'resync');
     await lost.close();
+  });
+
+  it("the stall's stream gets every new order for that stall, without the student's id", async () => {
+    const s = await openStream({ cookie: vendorCookie }, `/v1/vendor/stalls/${stallId}/orders/events`);
+    await s.waitFor((f) => f.event === 'ready');
+    const [created] = await db
+      .insert(orders)
+      .values(newOrder as typeof orders.$inferInsert)
+      .returning();
+    const f = await s.waitFor((x) => x.event === 'order' && x.data!.includes(created!.id));
+    const data = JSON.parse(f.data!);
+    expect(data).toMatchObject({ orderId: created!.id, status: 'placed', tokenNo: 3 });
+    expect(data).not.toHaveProperty('userId');
+    await s.close();
+  });
+
+  it("a student can't open a stall's stream", async () => {
+    const res = await fetch(`${base}/v1/vendor/stalls/${stallId}/orders/events`, { headers: { cookie } });
+    expect(res.status).toBe(403);
   });
 });

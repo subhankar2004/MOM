@@ -17,6 +17,7 @@ export interface Order {
   /** Signed QR to show at the counter while waiting to collect; null otherwise. */
   pickupQr: string | null;
   note: string | null;
+  rejectReason: string | null;
   items: Array<{
     itemId: string;
     name: string;

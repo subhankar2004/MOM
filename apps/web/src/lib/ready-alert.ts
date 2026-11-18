@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { playTones, unlockAudio } from './chime';
 
 /**
  * "Your food is ready": a buzz and a short two-tone chime. Both are best effort — vibration
@@ -12,28 +13,8 @@ export function alertOrderReady(): void {
   } catch {
     /* not supported */
   }
-  try {
-    const Ctx =
-      window.AudioContext ??
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    [880, 1320].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = freq;
-      const start = ctx.currentTime + i * 0.22;
-      gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(0.25, start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.2);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(start);
-      osc.stop(start + 0.21);
-    });
-    setTimeout(() => void ctx.close().catch(() => {}), 800);
-  } catch {
-    /* audio blocked */
-  }
+  // The page may have been tapped (e.g. "Place order"), which lets the chime play.
+  void unlockAudio().then((ok) => ok && playTones([880, 1320]));
 }
 
 /**

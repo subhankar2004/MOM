@@ -39,6 +39,11 @@ export const PHONES = {
   qrDesktop: phone(45),
   livePhone360: phone(46),
   liveDesktop: phone(47),
+  boardPhone360: phone(48),
+  boardDesktop: phone(49),
+  // stall owners for the order-board tests (one per project, separate from the shared vendor)
+  boardVendor360: phone(50),
+  boardVendorDesktop: phone(51),
 } as const;
 
 export const STORAGE = {

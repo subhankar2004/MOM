@@ -31,6 +31,8 @@ export const orderSchema = z.object({
   /** Signed QR payload to show at the counter, while the order is waiting to be collected. */
   pickupQr: z.string().nullable(),
   note: z.string().nullable(),
+  /** Why the stall rejected it (shown to the student). */
+  rejectReason: z.string().nullable(),
   items: z.array(
     z.object({
       itemId: z.uuid(),

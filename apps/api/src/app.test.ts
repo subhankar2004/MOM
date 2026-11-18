@@ -231,6 +231,11 @@ describe('API docs', () => {
           AWS_SMS_ORIGINATION_IDENTITY: 'MOMVST',
           AWS_SMS_DLT_ENTITY_ID: '1',
           AWS_SMS_DLT_TEMPLATE_ID: '2',
+          // payments off: production refuses the fake gateway and test keys
+          PAYMENTS_PROVIDER: 'razorpay',
+          RAZORPAY_KEY_ID: '',
+          RAZORPAY_KEY_SECRET: '',
+          RAZORPAY_WEBHOOK_SECRET: '',
         },
         okDb,
         false,

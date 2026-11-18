@@ -27,7 +27,7 @@ Done so far:
   #12 each stall's menu: tap a stall → dishes by category, Add buttons
   #13 the cart: saved on the phone, bill for UPI and cash, price checks
   #14 checkout: place a CASH order and get a token number straight away
-      (UPI arrives with #15)
+  #15 pay by UPI / online with Razorpay (TEST mode — no real money)
 Coming next:
   #4  database tables        #5  the API (server)      #6  the website
 This guide grows with every issue.
@@ -131,6 +131,28 @@ PART 4 — USEFUL COMMANDS
 
   ⚠ Don't delete the mom_pg_data / mom_s3_data volumes in Docker
     Desktop unless you want to erase all local data.
+
+
+PART 4b — TRYING ONLINE PAYMENTS (Razorpay TEST mode, no real money)
+-------------------------------------------------------------------
+Your test keys are already in apps/api/.env. To pay for an order:
+  1. Order from an OPEN stall, choose "Pay now by UPI", tap Place order.
+  2. The Razorpay window opens. In test mode use one of:
+       • Netbanking → any bank → on the next page click "Success"
+       • Card 4111 1111 1111 1111, any future expiry, any CVV,
+         then "Success" on the test page
+       • UPI id  success@razorpay  (only if UPI is switched on for your
+         Razorpay account: Dashboard → Account & Settings → Payment methods)
+  3. Your token number appears on the order page.
+
+Optional — Razorpay calling your Mac directly (the "webhook", which
+confirms payments even if the browser is closed):
+    $ npx cloudflared tunnel --url http://localhost:4000
+  It prints an https://….trycloudflare.com address. In the Razorpay
+  dashboard (Test Mode) → Settings → Webhooks → Add:
+    URL:    https://….trycloudflare.com/v1/webhooks/razorpay
+    Secret: the RAZORPAY_WEBHOOK_SECRET value from apps/api/.env
+    Events: payment.captured, order.paid, payment.failed
 
 
 PART 5 — COMMON PROBLEMS

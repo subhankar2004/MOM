@@ -23,6 +23,7 @@ export async function registerDocs(app: FastifyInstance, version: string): Promi
         { name: 'stalls', description: 'Public stall directory (no sign-in)' },
         { name: 'cart', description: 'Re-price a cart before checkout (public)' },
         { name: 'orders', description: 'Placing and viewing my orders (signed in)' },
+        { name: 'payments', description: 'Paying for UPI orders with Razorpay (signed in)' },
         { name: 'vendor', description: 'Stall console (stall members and super admins)' },
         { name: 'admin', description: 'Super admin only; every change is audited' },
       ],

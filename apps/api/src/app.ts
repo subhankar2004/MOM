@@ -3,7 +3,7 @@ import cookie from '@fastify/cookie';
 import { sql } from 'drizzle-orm';
 import Fastify, { LogController, type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from 'fastify-type-provider-zod';
-import { apiDocsEnabled, cookiesSecure, type Env } from './config/env.js';
+import { apiDocsEnabled, cookiesSecure, upiConfigured, type Env } from './config/env.js';
 import type { Db } from './db/client.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { AuthService } from './modules/auth/auth.service.js';
@@ -11,6 +11,9 @@ import { adminAccessRoutes } from './modules/admin/members.routes.js';
 import { meRoutes } from './modules/auth/me.routes.js';
 import { cartRoutes } from './modules/cart/cart.routes.js';
 import { ordersRoutes } from './modules/orders/orders.routes.js';
+import { createPaymentGateway, type PaymentGateway } from './modules/payments/gateway.js';
+import { paymentsRoutes } from './modules/payments/payments.routes.js';
+import { razorpayWebhookRoutes } from './modules/payments/webhooks.routes.js';
 import { stallsRoutes } from './modules/stalls/stalls.routes.js';
 import { StallsService } from './modules/stalls/stalls.service.js';
 import { vendorRoutes } from './modules/vendor/vendor.routes.js';
@@ -25,6 +28,8 @@ declare module 'fastify' {
   interface FastifyInstance {
     /** Drizzle database (or, in tests, a transaction that is rolled back). */
     db: Db;
+    /** Payment gateway (Razorpay), or null when UPI isn't configured. */
+    paymentGateway: PaymentGateway | null;
     env: Env;
   }
 }
@@ -40,6 +45,8 @@ export interface BuildAppOptions {
   now?: () => Date;
   /** Public stall list cache in ms (spec §10: 15 s). Tests pass 0. */
   stallsCacheTtlMs?: number;
+  /** Override the payment gateway (tests). Defaults to Razorpay from env, or none. */
+  gateway?: PaymentGateway | null;
 }
 
 /** Accepts an incoming X-Request-Id only if it looks like an id (prevents log injection). */
@@ -75,6 +82,7 @@ export async function buildApp({
   sms,
   now,
   stallsCacheTtlMs,
+  gateway: gatewayOverride,
 }: BuildAppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: logger ?? loggerOptions(env),
@@ -131,6 +139,9 @@ export async function buildApp({
     app.log,
   );
   const cookieConfig = { secure: cookiesSecure(env), domain: env.COOKIE_DOMAIN };
+  const gateway = gatewayOverride === undefined ? createPaymentGateway(env) : gatewayOverride;
+  const upiOnline = gateway !== null && upiConfigured(env);
+  app.decorate('paymentGateway', gateway);
 
   // Versioned business API.
   await app.register(
@@ -148,10 +159,27 @@ export async function buildApp({
           publicImageBaseUrl: env.PUBLIC_IMAGE_BASE_URL,
           now,
           cacheTtlMs: stallsCacheTtlMs ?? env.PUBLIC_CACHE_TTL_SECONDS * 1000,
+          upiOnline,
         }),
       });
-      await v1.register(cartRoutes, { prefix: '/cart', now });
-      await v1.register(ordersRoutes, { prefix: '/orders', now });
+      await v1.register(cartRoutes, { prefix: '/cart', now, upiOnline });
+      await v1.register(ordersRoutes, { prefix: '/orders', now, upiOnline });
+      if (gateway && env.RAZORPAY_KEY_SECRET) {
+        await v1.register(paymentsRoutes, {
+          prefix: '/payments',
+          gateway,
+          keySecret: env.RAZORPAY_KEY_SECRET,
+          now,
+        });
+        if (env.RAZORPAY_WEBHOOK_SECRET) {
+          await v1.register(razorpayWebhookRoutes, {
+            prefix: '/webhooks',
+            gateway,
+            webhookSecret: env.RAZORPAY_WEBHOOK_SECRET,
+            now,
+          });
+        }
+      }
       await v1.register(vendorRoutes, { prefix: '/vendor' });
       await v1.register(adminAccessRoutes, { prefix: '/admin' });
     },

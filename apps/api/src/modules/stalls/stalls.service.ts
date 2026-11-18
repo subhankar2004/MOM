@@ -32,6 +32,8 @@ export interface StallsServiceOptions {
   now?: () => Date;
   /** How long the public list is reused (spec §10: 15 s). 0 disables caching (tests). */
   cacheTtlMs?: number;
+  /** False when no payment gateway is configured: no stall shows UPI. */
+  upiOnline?: boolean;
 }
 
 /** Public stall directory: open/closed, congestion and payment methods (spec §6.1 S2, §10). */
@@ -176,7 +178,10 @@ export class StallsService {
         thresholds,
       ),
       // UPI needs an activated Razorpay Route account, whatever the toggle says (spec §6.2 V7).
-      payments: { upi: s.upiEnabled && s.routeStatus === 'activated', cash: s.cashEnabled },
+      payments: {
+        upi: (this.options.upiOnline ?? true) && s.upiEnabled && s.routeStatus === 'activated',
+        cash: s.cashEnabled,
+      },
       startingPricePaise: prices.find((p) => p.stallId === s.id)?.min ?? null,
       dishes: dishes
         .filter((d) => d.stallId === s.id)

@@ -24,6 +24,8 @@ export interface PlaceOrderInput {
   /** The total the student was shown. If prices changed since, the order is refused. */
   expectedTotalPaise: number;
   idempotencyKey: string;
+  /** False when no payment gateway is configured: UPI orders are refused. */
+  upiOnline: boolean;
 }
 
 /** IST calendar date (YYYY-MM-DD) — token numbers restart every day, India time. */
@@ -139,7 +141,7 @@ export async function placeOrder(
           { state },
         );
       }
-      const upiAccepted = stall.upiEnabled && stall.routeStatus === 'activated';
+      const upiAccepted = input.upiOnline && stall.upiEnabled && stall.routeStatus === 'activated';
       if (
         (input.paymentMethod === 'upi' && !upiAccepted) ||
         (input.paymentMethod === 'cash' && !stall.cashEnabled)
@@ -271,7 +273,7 @@ export async function placeOrder(
  * Next token for the stall today (IST). One atomic upsert: the row lock it takes makes
  * parallel orders queue up, so tokens are 1, 2, 3… with no gaps or duplicates.
  */
-async function issueToken(db: Db, stallId: string, now: Date) {
+export async function issueToken(db: Db, stallId: string, now: Date) {
   const tokenDay = istDay(now);
   const [row] = await db
     .insert(tokenCounters)

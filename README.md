@@ -72,6 +72,18 @@ category chips that follow the scroll, dish rows (photo, veg mark, price, Add / 
 sheet, "Sold out" dishes that can't be added, and a banner when the stall is closed or paused. One
 stall per cart: adding from another stall asks first. A 50-dish menu is tested at 4× CPU slowdown.
 
+**Admin: stalls & onboarding (#23):** `/admin/stalls` lists every stall (search, status filter,
+go-live progress, UPI payout status); "Add stall" creates a **draft** (web address picked from the
+name, kept unique). A stall's page has: Go live / Suspend / Move to draft (going live needs the whole
+checklist: owner registered, a dish, hours, a photo, a payment method; the API refuses otherwise and
+says what's missing); register the owner's or staff phone (they get access on sign-in); edit
+details; "Edit menu" and "Hours, photo & payments" open the stall console on that stall (admins may
+manage any stall; changes are audited under their name). **UPI payouts:** sets up the stall's
+Razorpay Route linked account step by step (account → stakeholder → Route product → bank account),
+saving each step so a refused attempt resumes instead of creating a second account; "Check status"
+asks Razorpay; with test keys, "Mark active (test mode)" lets UPI be tried. Bank details go straight
+to Razorpay: MOM stores only the account id and logs the last 4 digits.
+
 **Sales & dues (#22):** `/vendor/sales` (owners only): Today / Last 7 days / This month. Sales, UPI
 and cash (orders handed over in the period, from the orders), MOM's fees, the cash fees the stall
 owes MOM and the UPI payouts. Fees, refunds, settlements and dues come **only from the ledger** (an
@@ -194,6 +206,8 @@ Fastify 5 + Zod. `npm run dev` serves it on <http://localhost:4000>:
 | `GET`, `PATCH /v1/vendor/stalls/:stallId/settings`; `PUT /hours`                                                                    | stall owner: open/close/pause, payment methods, prep time, capacity, photo, details; replace weekly hours (all audited)                       |
 | `POST /v1/vendor/stalls/:stallId/uploads/presign`                                                                                   | stall owner: a 5-minute signed PUT into the stall's photo folder (WebP/JPEG/PNG, ≤ 2 MB); `purpose: cover` for the stall photo                |
 | `GET /v1/vendor/stalls`, `/stalls/:stallId`                                                                                         | stall console: my stalls (members) / all (super admin)                                                                                        |
+| `GET`, `POST /v1/admin/stalls`; `GET`, `PATCH /v1/admin/stalls/:stallId`                                                            | super admin: list/search, create (draft), details, edit, go live (checklist enforced), suspend                                                |
+| `POST /v1/admin/stalls/:stallId/settlement-account` (+ `/refresh`, `/test-activate`)                                                | super admin: Razorpay Route linked account for UPI payouts (resumable); check status; test-mode activation                                    |
 | `POST`, `GET /v1/admin/stalls/:stallId/members`                                                                                     | super admin: register a stall owner's phone, list members + pending                                                                           |
 | `POST /v1/admin/users/:userId/suspension`                                                                                           | super admin: suspend (ends all sessions) or reactivate                                                                                        |
 

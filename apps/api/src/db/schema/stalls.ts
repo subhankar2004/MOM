@@ -42,6 +42,8 @@ export const stalls = pgTable(
     upiEnabled: boolean().notNull().default(false),
     cashEnabled: boolean().notNull().default(true),
     razorpayAccountId: text().unique('stalls_razorpay_account_id_unique'),
+    /** Razorpay Route product configuration id (acc_prd_…), used to check activation. */
+    razorpayRouteProductId: text(),
     routeStatus: routeStatus().notNull().default('not_started'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

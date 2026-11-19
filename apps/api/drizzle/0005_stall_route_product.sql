@@ -1,0 +1,1 @@
+ALTER TABLE "stalls" ADD COLUMN "razorpay_route_product_id" text;

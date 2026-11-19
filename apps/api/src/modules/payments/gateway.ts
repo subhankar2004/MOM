@@ -15,6 +15,43 @@ export interface PaymentGateway {
     amountPaise: number;
     notes: Record<string, string>;
   }): Promise<{ id: string; status: 'processed' | 'pending' | 'failed' }>;
+
+  // ── Route: a linked account per stall, so UPI money can be paid out to it (spec §4.2) ──
+  /** Creates the stall's linked account. Returns its id (acc_…). */
+  createLinkedAccount(input: LinkedAccountInput): Promise<{ id: string }>;
+  /** The person behind the account (one per linked account). */
+  addStakeholder(accountId: string, input: { name: string; email: string }): Promise<void>;
+  /** Asks for the Route product; returns the product configuration id (acc_prd_…). */
+  requestRoute(accountId: string): Promise<RouteProduct>;
+  /** Where Razorpay pays the stall. Bank details go to Razorpay only; MOM never stores them. */
+  setSettlementAccount(accountId: string, productId: string, bank: BankAccount): Promise<RouteProduct>;
+  fetchRoute(accountId: string, productId: string): Promise<RouteProduct>;
+}
+
+export interface LinkedAccountInput {
+  email: string;
+  /** 10-digit mobile, no +91 */
+  phone: string;
+  legalBusinessName: string;
+  businessType: 'individual' | 'proprietorship';
+  contactName: string;
+  address: { street1: string; street2?: string; city: string; state: string; postalCode: string };
+}
+
+export interface BankAccount {
+  accountNumber: string;
+  ifsc: string;
+  beneficiaryName: string;
+}
+
+export type RouteActivation =
+  'requested' | 'needs_clarification' | 'under_review' | 'activated' | 'suspended';
+
+export interface RouteProduct {
+  id: string;
+  activationStatus: RouteActivation;
+  /** What Razorpay still needs, e.g. "settlements.ifsc_code: field_missing". */
+  requirements: string[];
 }
 
 export class PaymentGatewayError extends Error {
@@ -40,13 +77,17 @@ export class RazorpayGateway implements PaymentGateway {
     this.auth = `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`;
   }
 
-  private async call<T>(path: string, body: unknown): Promise<T> {
+  private async call<T>(path: string, body: unknown, method: 'POST' | 'PATCH' | 'GET' = 'POST'): Promise<T> {
+    // Route's account APIs live under /v2.
+    const url = path.startsWith('/v2/')
+      ? `${this.baseUrl.replace(/\/v1$/, '')}${path}`
+      : `${this.baseUrl}${path}`;
     let res: Response;
     try {
-      res = await fetch(`${this.baseUrl}${path}`, {
-        method: 'POST',
+      res = await fetch(url, {
+        method,
         headers: { Authorization: this.auth, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: method === 'GET' ? undefined : JSON.stringify(body),
         signal: AbortSignal.timeout(10_000),
       });
     } catch (err) {
@@ -75,6 +116,88 @@ export class RazorpayGateway implements PaymentGateway {
     );
     return { id: refund.id, status: refund.status };
   }
+
+  async createLinkedAccount(input: LinkedAccountInput) {
+    const account = await this.call<{ id: string }>('/v2/accounts', {
+      type: 'route',
+      email: input.email,
+      phone: input.phone,
+      legal_business_name: input.legalBusinessName,
+      business_type: input.businessType,
+      contact_name: input.contactName,
+      profile: {
+        category: 'food',
+        subcategory: 'food_court',
+        addresses: {
+          registered: {
+            street1: input.address.street1,
+            street2: input.address.street2 || input.address.street1,
+            city: input.address.city,
+            state: input.address.state,
+            postal_code: input.address.postalCode,
+            country: 'IN',
+          },
+        },
+      },
+    });
+    return { id: account.id };
+  }
+
+  async addStakeholder(accountId: string, input: { name: string; email: string }) {
+    await this.call(`/v2/accounts/${encodeURIComponent(accountId)}/stakeholders`, input);
+  }
+
+  async requestRoute(accountId: string) {
+    return toRouteProduct(
+      await this.call<RawRouteProduct>(`/v2/accounts/${encodeURIComponent(accountId)}/products`, {
+        product_name: 'route',
+        tnc_accepted: true,
+      }),
+    );
+  }
+
+  async setSettlementAccount(accountId: string, productId: string, bank: BankAccount) {
+    return toRouteProduct(
+      await this.call<RawRouteProduct>(
+        `/v2/accounts/${encodeURIComponent(accountId)}/products/${encodeURIComponent(productId)}/`,
+        {
+          settlements: {
+            account_number: bank.accountNumber,
+            ifsc_code: bank.ifsc,
+            beneficiary_name: bank.beneficiaryName,
+          },
+          tnc_accepted: true,
+        },
+        'PATCH',
+      ),
+    );
+  }
+
+  async fetchRoute(accountId: string, productId: string) {
+    return toRouteProduct(
+      await this.call<RawRouteProduct>(
+        `/v2/accounts/${encodeURIComponent(accountId)}/products/${encodeURIComponent(productId)}/`,
+        undefined,
+        'GET',
+      ),
+    );
+  }
+}
+
+interface RawRouteProduct {
+  id: string;
+  activation_status: RouteActivation;
+  requirements?: Array<{ field_reference?: string; reason_code?: string }>;
+}
+
+function toRouteProduct(raw: RawRouteProduct): RouteProduct {
+  return {
+    id: raw.id,
+    activationStatus: raw.activation_status,
+    requirements: (raw.requirements ?? []).map(
+      (r) => `${r.field_reference ?? 'unknown'}: ${r.reason_code ?? ''}`,
+    ),
+  };
 }
 
 /**
@@ -91,6 +214,60 @@ export class FakeGateway implements PaymentGateway {
   async refund(input: { paymentId: string; amountPaise: number }) {
     this.refunds.push(input);
     return { id: `rfnd_fake${randomBytes(7).toString('hex')}`, status: 'processed' as const };
+  }
+
+  /** Linked accounts made so far (tests inspect them; bank details are kept only here). */
+  readonly accounts = new Map<
+    string,
+    { input: LinkedAccountInput; stakeholders: number; bank?: BankAccount }
+  >();
+  /** Set to make the next Route call fail (tests of partial setup). */
+  failNext: string | null = null;
+
+  private maybeFail() {
+    if (this.failNext) {
+      const message = this.failNext;
+      this.failNext = null;
+      throw new PaymentGatewayError(message, 400);
+    }
+  }
+
+  async createLinkedAccount(input: LinkedAccountInput) {
+    this.maybeFail();
+    const id = `acc_fake${randomBytes(5).toString('hex')}`;
+    this.accounts.set(id, { input, stakeholders: 0 });
+    return { id };
+  }
+
+  async addStakeholder(accountId: string) {
+    this.maybeFail();
+    const account = this.accounts.get(accountId);
+    if (!account) throw new PaymentGatewayError('Linked account does not exist', 400);
+    if (account.stakeholders >= 1) {
+      throw new PaymentGatewayError('Stakeholders cannot be more than one for Route product.', 400);
+    }
+    account.stakeholders++;
+  }
+
+  async requestRoute(accountId: string) {
+    this.maybeFail();
+    return {
+      id: `acc_prd_fake_${accountId}`,
+      activationStatus: 'needs_clarification' as const,
+      requirements: [],
+    };
+  }
+
+  async setSettlementAccount(accountId: string, productId: string, bank: BankAccount) {
+    this.maybeFail();
+    this.accounts.get(accountId)!.bank = bank;
+    return { id: productId, activationStatus: 'under_review' as const, requirements: [] };
+  }
+
+  /** Razorpay "approves" the account the first time its status is checked. */
+  async fetchRoute(_accountId: string, productId: string) {
+    this.maybeFail();
+    return { id: productId, activationStatus: 'activated' as const, requirements: [] };
   }
 }
 

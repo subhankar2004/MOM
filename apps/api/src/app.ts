@@ -8,7 +8,11 @@ import type { Db } from './db/client.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import { adminAccessRoutes } from './modules/admin/members.routes.js';
+import { adminOrdersRoutes } from './modules/admin/orders-admin.routes.js';
+import { OrdersAdminService } from './modules/admin/orders-admin.service.js';
 import { adminStallsRoutes } from './modules/admin/stalls-admin.routes.js';
+import { adminUsersRoutes } from './modules/admin/users-admin.routes.js';
+import { UsersAdminService } from './modules/admin/users-admin.service.js';
 import { StallsAdminService } from './modules/admin/stalls-admin.service.js';
 import { meRoutes } from './modules/auth/me.routes.js';
 import { cartRoutes } from './modules/cart/cart.routes.js';
@@ -240,6 +244,15 @@ export async function buildApp({
       await v1.register(adminStallsRoutes, {
         prefix: '/admin',
         stalls: new StallsAdminService(db, gateway, { publicImageBaseUrl: env.PUBLIC_IMAGE_BASE_URL }),
+      });
+      await v1.register(adminUsersRoutes, {
+        prefix: '/admin',
+        users: new UsersAdminService(db, env.SUPER_ADMIN_PHONES),
+      });
+      await v1.register(adminOrdersRoutes, {
+        prefix: '/admin',
+        now,
+        orders: new OrdersAdminService(db, gateway),
       });
     },
     { prefix: '/v1' },

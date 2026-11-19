@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { Db } from '../db/client.js';
-import { stallMembers } from '../db/schema/index.js';
+import { stallMembers, users } from '../db/schema/index.js';
 import { forbidden, unauthenticated } from '../lib/errors.js';
 import type { Role } from '../modules/auth/tokens.js';
 
@@ -44,6 +44,27 @@ export function requireStallAccess(
     if (!member || (options.memberRoles && !options.memberRoles.includes(member.role))) {
       request.log.warn({ userId: auth.userId, stallId }, 'stall access denied');
       throw forbidden("You don't manage this stall");
+    }
+  };
+}
+
+/**
+ * preHandler for the admin console: the access token says super_admin AND the database still
+ * agrees (active, not deleted, still super_admin). Admin powers end the moment an admin is
+ * removed or suspended, instead of when their 15-minute access token expires.
+ */
+export function requireSuperAdmin(db: Db): PreHandler {
+  return async (request) => {
+    const auth = request.auth;
+    if (!auth) throw unauthenticated();
+    if (auth.role !== 'super_admin') throw forbidden();
+    const [user] = await db
+      .select({ role: users.role, status: users.status, deletedAt: users.deletedAt })
+      .from(users)
+      .where(eq(users.id, auth.userId));
+    if (!user || user.deletedAt || user.status !== 'active' || user.role !== 'super_admin') {
+      request.log.warn({ userId: auth.userId }, 'admin access denied: no longer an active super admin');
+      throw forbidden();
     }
   };
 }

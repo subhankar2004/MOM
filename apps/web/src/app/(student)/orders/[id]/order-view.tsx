@@ -102,9 +102,21 @@ function OrderDetails({ order: o }: { order: Order }) {
               : ''}
           </p>
         )}
-        {o.status !== 'rejected' && o.paymentMethod === 'cash' && o.paymentStatus === 'due' && (
-          <p className="font-semibold">Pay {formatINR(o.totalPaise)} in cash when you collect.</p>
+        {o.status === 'cancelled' && o.rejectReason && (
+          // Cancelled by MOM (e.g. the stall closed suddenly): say why.
+          <p role="status" className="font-semibold">
+            Cancelled by MOM: “{o.rejectReason}”
+            {o.paymentStatus === 'refunded' || o.paymentStatus === 'refund_pending'
+              ? ' Your payment is being refunded in full.'
+              : ''}
+          </p>
         )}
+        {o.status !== 'rejected' &&
+          o.status !== 'cancelled' &&
+          o.paymentMethod === 'cash' &&
+          o.paymentStatus === 'due' && (
+            <p className="font-semibold">Pay {formatINR(o.totalPaise)} in cash when you collect.</p>
+          )}
       </div>
 
       <Card className="w-full p-4">

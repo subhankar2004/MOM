@@ -4,6 +4,7 @@ import { refreshTokens, stallMembers, stalls, users, vendorInvites } from '../..
 import { audit } from '../../lib/audit.js';
 import { notFound } from '../../lib/errors.js';
 import type { Role } from '../auth/tokens.js';
+import { assertAnotherActiveSuperAdmin } from '../admin/users-admin.service.js';
 
 type UserRow = typeof users.$inferSelect;
 export type MemberRole = 'owner' | 'staff';
@@ -13,6 +14,8 @@ function roleFor(current: Role, memberships: MemberRole[]): Role {
   if (current === 'super_admin') return 'super_admin';
   if (memberships.includes('owner')) return 'vendor_owner';
   if (memberships.includes('staff')) return 'vendor_staff';
+  // Removed from their last stall: an ordinary student account again.
+  if (current === 'vendor_owner' || current === 'vendor_staff') return 'student';
   return current;
 }
 
@@ -163,6 +166,58 @@ export async function registerStallMember(
   });
 }
 
+/**
+ * Super admin removes someone from a stall. Their stall console access ends at once (every
+ * vendor request checks membership in the database); their role follows the stalls they still
+ * have (none → student).
+ */
+export async function removeStallMember(db: Db, stallId: string, userId: string, actor: ActorMeta) {
+  await db.transaction(async (tx) => {
+    const [removed] = await tx
+      .delete(stallMembers)
+      .where(and(eq(stallMembers.stallId, stallId), eq(stallMembers.userId, userId)))
+      .returning();
+    if (!removed) throw notFound('This person is not a member of this stall');
+    const [user] = await tx.select().from(users).where(eq(users.id, userId));
+    await syncRole(tx, user!);
+    await audit(tx, {
+      actorId: actor.actorId,
+      action: 'stall.member.remove',
+      entity: 'stall',
+      entityId: stallId,
+      before: { userId, role: removed.role },
+      ip: actor.ip,
+      userAgent: actor.userAgent,
+    });
+  });
+}
+
+/** Super admin withdraws a phone registered for a stall that hasn't signed in yet. */
+export async function cancelStallInvite(db: Db, stallId: string, phone: string, actor: ActorMeta) {
+  await db.transaction(async (tx) => {
+    const [invite] = await tx
+      .delete(vendorInvites)
+      .where(
+        and(
+          eq(vendorInvites.stallId, stallId),
+          eq(vendorInvites.phone, phone),
+          isNull(vendorInvites.acceptedAt),
+        ),
+      )
+      .returning();
+    if (!invite) throw notFound('No pending registration for this number');
+    await audit(tx, {
+      actorId: actor.actorId,
+      action: 'stall.invite.cancel',
+      entity: 'stall',
+      entityId: stallId,
+      before: { phone, role: invite.role },
+      ip: actor.ip,
+      userAgent: actor.userAgent,
+    });
+  });
+}
+
 /** Members and still-pending invites of a stall (admin view). */
 export async function listStallMembers(db: Db, stallId: string) {
   const [stall] = await db.select({ id: stalls.id }).from(stalls).where(eq(stalls.id, stallId));
@@ -202,8 +257,11 @@ export async function stallsForUser(db: Db, userId: string, role: Role) {
  */
 export async function setUserSuspended(db: Db, userId: string, suspended: boolean, actor: ActorMeta) {
   return db.transaction(async (tx) => {
-    const [before] = await tx.select().from(users).where(eq(users.id, userId));
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('mom.super_admins'))`);
+    const [before] = await tx.select().from(users).where(eq(users.id, userId)).for('update');
     if (!before || before.deletedAt) throw notFound('User not found');
+    // Suspending the last active super admin would lock everyone out of the admin console.
+    if (suspended && before.role === 'super_admin') await assertAnotherActiveSuperAdmin(tx, userId);
     const status = suspended ? 'suspended' : 'active';
     await tx.update(users).set({ status }).where(eq(users.id, userId));
     if (suspended) {

@@ -1,0 +1,204 @@
+MOM — HOW TO USE IT
+====================
+
+MOM lets students at VSSUT order food from campus stalls ahead of time, pay by UPI or
+cash, and pick it up with a token and QR code. There are three kinds of people using it:
+
+  1. Students            order food
+  2. Stall owners/staff  run the stall: orders, pickup, menu, settings, sales
+  3. MOM admin           adds stalls and their owners
+
+Everyone signs in the same way: mobile number + a 6-digit code sent by SMS. No passwords.
+The app works in any phone or laptop browser; on a phone you can "Add to Home Screen".
+
+
+------------------------------------------------------------------------
+1. SIGNING IN
+------------------------------------------------------------------------
+
+  1. Open the app and tap "Sign in" (or open any page that needs you to be signed in).
+  2. Type your 10-digit mobile number and tap "Send code".
+  3. Type the 6-digit code from the SMS. (You can ask for a new code after 30 seconds.)
+  4. First time only: type your name and tap "Continue".
+
+You stay signed in on that device. "Sign out" is in the top bar.
+Stall owners are added by the MOM admin first (see section 4); after that they simply
+sign in with their number and land in their stall's console.
+
+
+------------------------------------------------------------------------
+2. FOR STUDENTS
+------------------------------------------------------------------------
+
+Find a stall
+  - The home page lists the stalls: open ones first, with how busy they are
+    ("Not busy, about 10 minute wait") and whether they take UPI and/or cash.
+  - Search by stall name or by dish ("dosa").
+  - Closed stalls show when they open next.
+
+Order
+  1. Open a stall, tap "Add" on dishes (use − / + to change the number).
+     Sold-out dishes are greyed. Tap a dish's name or photo for details.
+  2. Tap "View cart". Add a note for the stall if you like ("less spicy").
+  3. Tap "Continue to payment" and choose:
+       - Pay now by UPI       : subtotal + 1% platform fee.
+       - Pay cash at counter  : subtotal + 1% platform fee + 5% cash-handling fee.
+     A method the stall doesn't accept right now is greyed out ("Not accepted by this stall").
+  4. Tap "Place order".
+       - UPI: Razorpay opens; pay with your UPI app. You have 15 minutes, then the order expires.
+       - Cash: you get your token immediately and pay at the counter.
+  If a price changed or something sold out while you were ordering, the app shows the new
+  bill instead of placing the order.
+
+Your token
+  - After ordering you see your token number (e.g. #23), a 4-digit pickup code and a QR code.
+    The screen stays awake while it's open.
+  - The status updates live: Waiting for the stall → Being prepared → READY (the screen turns
+    green, your phone buzzes and plays a sound).
+  - At the counter, show the QR code. If the scanner can't read it, tell them your token number
+    and your 4-digit pickup code.
+
+My orders ("Orders" tab)
+  - Active orders and past orders, with live status.
+  - Cancel: possible only before the stall starts preparing. UPI payments are refunded in full.
+  - "Order again" refills your cart with the same dishes.
+  - If a stall rejects your order you see their reason, and a UPI payment is refunded in full.
+
+Cash rule: there's a limit on how many unpaid cash orders you can have open at once.
+
+
+------------------------------------------------------------------------
+3. FOR STALL OWNERS AND COUNTER STAFF (the "stall console", /vendor)
+------------------------------------------------------------------------
+
+Owners can use everything below. Counter staff can use only "Orders" and "Scan".
+If you manage more than one stall, pick the stall in the top bar.
+
+ORDERS — the live order board
+  - Three columns: New → Preparing → Ready (on a phone they're tabs).
+  - Tap "Turn on order sound" once when you open it: every new order then plays a chime,
+    and the browser tab shows "(3)" for orders waiting to be accepted.
+  - Each ticket shows the token, the dishes, the student's note, "UPI paid" or
+    "Cash due ₹X", and how long it has waited (highlighted after 15 minutes).
+  - Accept        → moves it to Preparing.
+  - Mark ready    → the student is told at once. (Works straight from New for instant items.)
+  - Reject        → choose a reason (the student sees it). A paid UPI order is refunded in full.
+  - "Finished today" at the bottom lists collected, rejected and cancelled orders.
+
+SCAN — handing food over
+  - Hold the student's QR code in front of the camera (use the torch button in the dark).
+  - No QR? Type the token number, tap Next, then the student's 4-digit pickup code.
+  - You see a big result:
+      ✅ Valid order   — token, dishes, note and payment. A warning appears if you haven't
+                         marked it ready yet.
+      ❌ with a reason — not a valid order / for another stall / already collected (with the
+                         time) / not paid / cancelled or rejected.
+  - Tap once to finish:
+      UPI order:  "Hand over"
+      Cash order: "Cash received ₹127.20 · Hand over"  (take the cash first!)
+  - Then "Scan next".
+
+MENU (owners)
+  - Add categories (e.g. "Dosa", "Drinks"); rename, reorder with the arrows, delete when empty.
+  - Add a dish: photo, name, price in ₹, veg / non-veg, description, available now.
+    Photos are shrunk automatically before upload. Tap a dish to edit or delete it.
+  - The switch on each dish row marks it available or "Sold out" instantly.
+  - "Mark all available" brings everything back (e.g. each morning).
+  - Every price change is recorded (who, old price, new price).
+
+SETTINGS (owners)
+  - Open or closed: "Follow hours", "Open now" or "Closed now". Open now / Closed now last
+    until midnight, then the stall follows its hours again.
+  - "Take new orders": switch off to pause when the kitchen is full; orders already placed
+    carry on.
+  - Payment methods: UPI and Cash switches. At least one must stay on. UPI can be turned on
+    only once your settlement account is active ("Settlement account pending" until then).
+  - Opening hours: several time slots per day, slots past midnight (6 PM – 1 AM) allowed,
+    "Use for every day" copies a day to the whole week. Tap "Save hours".
+  - Kitchen speed: minutes to prepare an order and how many orders you can cook at once.
+    Students' waiting-time estimate uses these.
+  - Stall details: photo, description, where to find you.
+
+SALES (owners)
+  - Today, Last 7 days or This month.
+  - Sales (orders handed over), UPI and cash split, MOM's fees.
+  - "Cash fees owed to MOM": with cash orders you keep the student's whole payment, so MOM's
+    fees on those orders are owed back to MOM.
+  - "UPI payouts": your UPI sales, paid to your bank by Razorpay.
+  - A daily chart (hover or tap a bar for details, or "Show as a table") and
+    "Download CSV" for Excel / Google Sheets.
+
+
+------------------------------------------------------------------------
+4. FOR THE MOM ADMIN (/admin)
+------------------------------------------------------------------------
+
+Your number is made a super admin by the MOM team (it's listed in the server settings).
+After signing in you land in the admin console.
+
+STALLS — adding a stall and its owner
+  1. "Stalls" → "Add stall": name, where it is, food types. It starts as a DRAFT
+     (students can't see it).
+  2. On the stall's page, under "Owner & staff", type the owner's mobile number, choose
+     Owner (or Counter staff) and tap "Register". When they sign in with that number they
+     go straight to this stall's console.
+  3. Fill the go-live checklist ("Ready to go live: x of 5"):
+       owner registered, at least one dish, opening hours, a stall photo, a payment method.
+     "Edit menu" and "Hours, photo & payments" open that stall's console for you; whatever
+     you change there is recorded under your name.
+  4. Tap "Go live". If something is missing, the app tells you what.
+  - "Suspend" hides a live stall from students at once (orders already placed carry on);
+    "Make live again" / "Move to draft" undo it.
+  - "Details" lets you change the name, web address, location, description, food types and
+    veg-only flag.
+
+UPI PAYOUTS for a stall
+  - Under "UPI payouts" → "Set up": the owner's name, business name, email, mobile, address
+    and bank account (account number, IFSC, account holder name) → "Send to Razorpay".
+    Bank details go straight to Razorpay; MOM keeps only the last 4 digits.
+  - Razorpay reviews the account. "Check status" asks Razorpay; once it says Active, the
+    stall can switch UPI on in its settings.
+  - If Razorpay refuses something (e.g. a wrong IFSC), fix it and send again: it continues
+    where it stopped.
+  - With Razorpay TEST keys there's "Mark active (test mode)" to try UPI without a real account.
+
+USERS & ACCESS
+  - Search anyone by name or phone; filter by role (student, stall owner, counter staff,
+    super admin) or status. Open a person to see the stalls they manage, their recent
+    orders and how many devices they're signed in on.
+  - Suspend… (asks first): they're signed out everywhere — open pages stop within 15
+    minutes — and can't sign in until you tap "Reactivate account".
+  - Sign out everywhere: ends all their sessions (e.g. a lost phone).
+  - Reset cash strikes: lets a student order with cash again.
+  - Stall roles come from the stalls page: "Remove" (on the person's page or the stall's
+    "Owner & staff") takes them off a stall at once; with no stalls left they're a normal
+    student account. "Withdraw" cancels a phone number registered by mistake.
+  - Make / Remove super admin…: type the last 4 digits of their phone to confirm.
+    MOM always keeps at least one active super admin, and numbers listed in the server
+    settings stay super admin. A removed admin loses admin access at once.
+  - Everything here is recorded in the audit log under your name.
+
+ORDERS
+  - Every order, newest first. Search by #token, phone number, student name or order id;
+    filter by stall, status, payment and dates. "Show more" loads older ones.
+  - Open an order to see the bill, the student and stall, Razorpay payments and refunds,
+    and a timeline of what happened and who did it.
+  - Cancel order… (with a reason): the student and the stall see it cancelled and the
+    student sees your reason. A paid UPI order is refunded in full. If Razorpay can't be
+    reached, the order is still cancelled and shows "Refund pending" with "Retry refund…".
+  - Refund… (with a reason): money back for a finished UPI order (e.g. a complaint after
+    pickup) without changing the order. Cash orders have no online payment to refund.
+
+Coming next (these pages still show "coming soon"): Overview, Revenue, Settlements,
+Platform settings and the Audit log (issues #25–#27).
+
+
+------------------------------------------------------------------------
+5. GOOD TO KNOW
+------------------------------------------------------------------------
+
+  - Light / dark mode: the screen icon in the top bar.
+  - Prices: the fee lines are always shown separately on the bill.
+  - Refunds for UPI orders go back to the student's UPI account (usually within a few days,
+    as Razorpay processes them).
+  - Problems at the counter? The manual token + pickup code always works without a camera.

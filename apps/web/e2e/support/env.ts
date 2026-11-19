@@ -65,6 +65,9 @@ export const PHONES = {
   // a stall owner registered by the admin in the onboarding test
   onboardOwner360: phone(66),
   onboardOwnerDesktop: phone(67),
+  // students handled by the admin in the users & orders tests
+  adminTarget360: phone(68),
+  adminTargetDesktop: phone(69),
 } as const;
 
 export const STORAGE = {

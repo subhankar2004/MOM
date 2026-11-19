@@ -1,7 +1,7 @@
 import { normalizeIndianMobile } from '@mom/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { requireRole } from '../../plugins/authz.js';
+import { requireSuperAdmin } from '../../plugins/authz.js';
 import type { StallsAdminService } from './stalls-admin.service.js';
 
 const stallParams = z.object({ stallId: z.uuid('Not a valid stall id') });
@@ -73,7 +73,7 @@ const mobile10 = z.string().transform((v, ctx) => {
 export const adminStallsRoutes: FastifyPluginAsyncZod<{ stalls: StallsAdminService }> = async (app, opts) => {
   const { stalls } = opts;
   app.addHook('preHandler', app.requireAuth);
-  app.addHook('preHandler', requireRole('super_admin'));
+  app.addHook('preHandler', requireSuperAdmin(app.db));
   const actor = (req: {
     auth: { userId: string } | null;
     ip: string;

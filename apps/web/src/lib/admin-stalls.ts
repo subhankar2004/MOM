@@ -159,6 +159,21 @@ export function useRegisterMember(id: string) {
   });
 }
 
+/** Remove a member, or withdraw a phone that hasn't signed in yet. */
+export function useRemovePerson(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (who: { userId: string } | { phone: string }) =>
+      'userId' in who
+        ? apiRequest(`${base(id)}/members/${encodeURIComponent(who.userId)}`, { method: 'DELETE' })
+        : apiRequest(`${base(id)}/invites?phone=${encodeURIComponent(who.phone)}`, { method: 'DELETE' }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: detailKey(id) });
+      void queryClient.invalidateQueries({ queryKey: listKey });
+    },
+  });
+}
+
 /** "Dosa, South Indian ,  " → ["Dosa", "South Indian"] (max 6). */
 export function parseTags(text: string): string[] {
   return [

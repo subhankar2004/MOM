@@ -22,3 +22,34 @@ export async function recordOrderFees(
       rows.map((r) => ({ ...r, stallId: order.stallId, orderId: order.id, direction: 'credit' as const })),
     );
 }
+
+/**
+ * A manual correction by MOM (spec §4.4: "adjustment"): credit = the stall owes MOM more,
+ * debit = MOM gives the stall money back (e.g. goodwill, or fixing a mistake). The ledger is
+ * append-only, so mistakes are corrected with another adjustment, never by editing.
+ */
+export async function recordAdjustment(
+  db: Db,
+  input: {
+    stallId: string;
+    direction: 'credit' | 'debit';
+    amountPaise: number;
+    note: string;
+    createdBy: string;
+    orderId?: string | null;
+  },
+) {
+  const [entry] = await db
+    .insert(ledgerEntries)
+    .values({
+      stallId: input.stallId,
+      orderId: input.orderId ?? null,
+      entryType: 'adjustment',
+      direction: input.direction,
+      amountPaise: input.amountPaise,
+      note: input.note,
+      createdBy: input.createdBy,
+    })
+    .returning();
+  return entry!;
+}

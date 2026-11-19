@@ -68,6 +68,11 @@ export const PHONES = {
   // students handled by the admin in the users & orders tests
   adminTarget360: phone(68),
   adminTargetDesktop: phone(69),
+  // revenue tests: a stall owner and a student who orders with cash
+  financeVendor360: phone(70),
+  financeVendorDesktop: phone(71),
+  financeStudent360: phone(72),
+  financeStudentDesktop: phone(73),
 } as const;
 
 export const STORAGE = {

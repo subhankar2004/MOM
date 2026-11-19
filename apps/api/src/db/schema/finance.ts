@@ -1,5 +1,16 @@
 import { sql } from 'drizzle-orm';
-import { bigint, check, date, index, integer, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  check,
+  date,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { createdAt, publicId } from './_common.js';
 import { ledgerDirection, ledgerEntryType } from './enums.js';
 import { orders } from './orders.js';
@@ -83,5 +94,30 @@ export const auditLog = pgTable(
     index('audit_log_entity_idx').on(t.entity, t.entityId, t.createdAt.desc()),
     index('audit_log_actor_idx').on(t.actorId, t.createdAt.desc()),
     index('audit_log_created_idx').on(t.createdAt.desc()),
+  ],
+);
+
+/**
+ * One reconciliation run (nightly, or started by an admin): the ledger checked against the
+ * orders and the Razorpay payment records (spec §4.4). `issues` lists every mismatch found.
+ */
+export const reconciliationRuns = pgTable(
+  'reconciliation_runs',
+  {
+    id: bigint({ mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    /** Orders created in [periodStart, periodEnd) were checked. */
+    periodStart: timestamp({ withTimezone: true }).notNull(),
+    periodEnd: timestamp({ withTimezone: true }).notNull(),
+    ordersChecked: integer().notNull(),
+    /** ok = nothing wrong; mismatch = at least one error (warnings alone stay ok). */
+    status: text().notNull(),
+    issues: jsonb().notNull(),
+    /** null = the nightly job. */
+    startedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check('reconciliation_runs_status', sql`${t.status} in ('ok', 'mismatch')`),
+    index('reconciliation_runs_created_idx').on(t.createdAt.desc()),
   ],
 );

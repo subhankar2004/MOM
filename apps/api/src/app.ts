@@ -8,7 +8,9 @@ import type { Db } from './db/client.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import { adminAccessRoutes } from './modules/admin/members.routes.js';
+import { adminFinanceRoutes } from './modules/admin/finance.routes.js';
 import { adminOrdersRoutes } from './modules/admin/orders-admin.routes.js';
+import { RevenueService } from './modules/admin/revenue.service.js';
 import { OrdersAdminService } from './modules/admin/orders-admin.service.js';
 import { adminStallsRoutes } from './modules/admin/stalls-admin.routes.js';
 import { adminUsersRoutes } from './modules/admin/users-admin.routes.js';
@@ -253,6 +255,11 @@ export async function buildApp({
         prefix: '/admin',
         now,
         orders: new OrdersAdminService(db, gateway),
+      });
+      await v1.register(adminFinanceRoutes, {
+        prefix: '/admin',
+        now,
+        revenue: new RevenueService(db, stallsService),
       });
     },
     { prefix: '/v1' },

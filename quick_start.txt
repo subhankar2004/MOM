@@ -26,7 +26,8 @@ Done so far (GitHub issues, plan in spec.md)
           QR scanner and hand-over, sales & dues
   #23–#24 admin: stalls & onboarding (go-live checklist, UPI payouts),
           users & access, orders explorer (cancel / refund)
-  Next:   #25 revenue, #26 settlements, #27 platform settings & audit log,
+  #25     admin overview, revenue, nightly money check (reconciliation)
+  Next:   #26 settlements, #27 platform settings & audit log,
           then #28–#30 deployment to AWS
 
 What runs where

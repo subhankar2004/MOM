@@ -74,7 +74,7 @@ test("today's sales, cash fees owed, the week's chart and a CSV", async ({ page 
   const todayBar = chart.getByRole('listitem').last();
   await expect(todayBar).toHaveAttribute(
     'aria-label',
-    /₹240\.00 from 2 orders \(UPI ₹0\.00, cash ₹240\.00\)/,
+    /₹240\.00 from 2 orders \(UPI ₹0\.00, Cash ₹240\.00\)/,
   );
   await todayBar.hover();
   await expect(page.getByRole('tooltip')).toContainText('₹240.00 · 2 orders');

@@ -4,6 +4,7 @@ import { requireRole, requireStallAccess } from '../../plugins/authz.js';
 import { openEventStream } from '../../plugins/sse.js';
 import type { EventHub } from '../events/event-hub.js';
 import type { PaymentGateway } from '../payments/gateway.js';
+import { releaseTransfer } from '../finance/transfers.service.js';
 import { handOver, verifyPickup } from './pickup.service.js';
 import {
   boardOrder as getBoardOrder,
@@ -223,14 +224,20 @@ export const vendorOrdersRoutes: FastifyPluginAsyncZod<VendorOrdersOptions> = as
         response: { 200: z.object({ order: boardOrder }) },
       },
     },
-    async (req) => ({
-      order: await handOver(app.db, {
+    async (req) => {
+      const order = await handOver(app.db, {
         stallId: req.params.stallId,
         orderId: req.params.orderId,
         cashReceived: req.body.cashReceived,
         actorId: req.auth!.userId,
         now: now(),
-      }),
-    }),
+      });
+      // UPI: the stall's held share can now settle to its bank (the transfer job retries
+      // if Razorpay is down; the hand-over itself is done either way).
+      if (opts.gateway && order.paymentMethod === 'upi') {
+        await releaseTransfer(app.db, opts.gateway, order.id, now(), req.log);
+      }
+      return { order };
+    },
   );
 };

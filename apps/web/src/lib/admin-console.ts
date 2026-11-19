@@ -143,6 +143,14 @@ export interface AdminOrderDetail {
   }>;
   refunds: Array<{ id: string; amountPaise: number; status: string; reason: string; createdAt: string }>;
   timeline: Array<{ at: string; label: string; by: string | null }>;
+  /** The stall's UPI payout (Razorpay Route transfer), if any. */
+  payout: {
+    status: 'created' | 'on_hold' | 'released' | 'reversed' | 'failed';
+    amountPaise: number;
+    providerTransferId: string | null;
+    lastError: string | null;
+    releasedAt: string | null;
+  } | null;
   can: { cancel: boolean; refund: boolean };
 }
 

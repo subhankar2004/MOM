@@ -71,11 +71,19 @@ export const transfers = pgTable(
     providerTransferId: text().unique('transfers_provider_transfer_id_unique'),
     amountPaise: integer().notNull(),
     status: transferStatus().notNull().default('created'),
+    /** Released to the stall's bank (order collected). */
+    releasedAt: timestamp({ withTimezone: true }),
+    /** Pulled back (order refunded). */
+    reversedAt: timestamp({ withTimezone: true }),
+    /** Razorpay calls tried so far (the retry job gives up after 5) and the last error. */
+    attempts: integer().notNull().default(0),
+    lastError: text(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     check('transfers_amount_positive', sql`${t.amountPaise} > 0`),
+    index('transfers_status_idx').on(t.status),
     index('transfers_stall_created_idx').on(t.stallId, t.createdAt.desc()),
   ],
 );

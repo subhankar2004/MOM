@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { webhookEvents } from '../../db/schema/index.js';
 import { AppError } from '../../lib/errors.js';
 import type { PaymentGateway } from './gateway.js';
+import { ensureTransfer, onTransferWebhook } from '../finance/transfers.service.js';
 import { confirmPayment, markPaymentFailed, refundOrder } from './payments.service.js';
 import { verifyWebhookSignature } from './signatures.js';
 
@@ -11,6 +12,7 @@ interface RazorpayEvent {
   created_at?: number;
   payload?: {
     payment?: { entity?: { id?: string; order_id?: string; amount?: number; status?: string } };
+    transfer?: { entity?: { id: string; error?: { description?: string; reason?: string } | null } };
   };
 }
 
@@ -95,6 +97,9 @@ export const razorpayWebhookRoutes: FastifyPluginAsync<{
               { orderId: result.orderId, reason: 'Paid after the order expired', actorId: null },
               req.log,
             );
+          } else {
+            // The stall's share, held until pickup (retried by the job if Razorpay is down).
+            await ensureTransfer(app.db, opts.gateway, result.orderId, req.log);
           }
           req.log.info(
             { event: event.event, orderId: result.orderId, outcome: result.outcome },
@@ -102,6 +107,12 @@ export const razorpayWebhookRoutes: FastifyPluginAsync<{
           );
         } else if (event.event === 'payment.failed' && payment?.order_id) {
           await markPaymentFailed(app.db, payment.order_id, payment);
+        } else if (
+          (event.event === 'transfer.processed' || event.event === 'transfer.failed') &&
+          event.payload?.transfer?.entity?.id
+        ) {
+          // Route webhooks (spec §4.2): a held transfer failed (e.g. Razorpay balance) → admin sees it.
+          await onTransferWebhook(app.db, event.event, event.payload.transfer.entity, req.log);
         }
         await app.db
           .update(webhookEvents)

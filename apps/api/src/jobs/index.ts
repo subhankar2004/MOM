@@ -2,10 +2,13 @@ import { PgBoss } from 'pg-boss';
 import type { Db } from '../db/client.js';
 import { expireUnpaidOrders } from '../modules/payments/payments.service.js';
 import { reconcile } from '../modules/finance/reconcile.service.js';
+import { sweepTransfers } from '../modules/finance/transfers.service.js';
+import type { PaymentGateway } from '../modules/payments/gateway.js';
 import { resetStallOverrides } from '../modules/stalls/stalls.service.js';
 
 interface JobLogger {
   info(obj: object, msg: string): void;
+  warn(obj: object, msg: string): void;
   error(obj: object, msg: string): void;
 }
 
@@ -13,6 +16,7 @@ export const JOBS = {
   resetStallOverrides: 'stalls.reset-overrides',
   expireUnpaidOrders: 'orders.expire-unpaid',
   reconcile: 'finance.reconcile',
+  sweepTransfers: 'finance.sweep-transfers',
 } as const;
 
 /**
@@ -20,7 +24,12 @@ export const JOBS = {
  * Schedules are stored in the database, so with several API containers each job still runs
  * once per occurrence.
  */
-export async function startJobs(databaseUrl: string, db: Db, log: JobLogger): Promise<() => Promise<void>> {
+export async function startJobs(
+  databaseUrl: string,
+  db: Db,
+  log: JobLogger,
+  gateway: PaymentGateway | null = null,
+): Promise<() => Promise<void>> {
   const boss = new PgBoss({ connectionString: databaseUrl, schema: 'pgboss', application_name: 'mom-jobs' });
   boss.on('error', (err) => log.error({ err }, 'job queue error'));
   await boss.start();
@@ -48,6 +57,18 @@ export async function startJobs(databaseUrl: string, db: Db, log: JobLogger): Pr
   await boss.work(JOBS.reconcile, async () => {
     await reconcile(db, { now: new Date(), days: 7, startedBy: null }, log);
   });
+
+  // Every 5 minutes: Route transfers that didn't happen at the moment they should have
+  // (create after payment, release after pickup, reverse after refund).
+  if (gateway) {
+    await boss.createQueue(JOBS.sweepTransfers);
+    await boss.schedule(JOBS.sweepTransfers, '*/5 * * * *', null, { tz: 'Asia/Kolkata' });
+    await boss.work(JOBS.sweepTransfers, async () => {
+      const done = await sweepTransfers(db, gateway, new Date(), log);
+      if (done.created + done.released + done.reversed > 0)
+        log.info({ job: JOBS.sweepTransfers, ...done }, 'transfers caught up');
+    });
+  }
 
   log.info({ jobs: Object.values(JOBS) }, 'background jobs started');
   return () => boss.stop({ graceful: true, timeout: 10_000 });

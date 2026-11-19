@@ -5,6 +5,7 @@ import { getOrderForUser } from '../orders/orders.service.js';
 import { orderSchema, toOrderResponse } from '../orders/orders.routes.js';
 import type { PaymentGateway } from './gateway.js';
 import { confirmPayment, refundOrder, startPayment } from './payments.service.js';
+import { ensureTransfer } from '../finance/transfers.service.js';
 import { verifyCheckoutSignature } from './signatures.js';
 
 export interface PaymentsRoutesOptions {
@@ -91,6 +92,9 @@ export const paymentsRoutes: FastifyPluginAsyncZod<PaymentsRoutesOptions> = asyn
           { orderId: mine.id, reason: 'Paid after the order expired', actorId: null },
           req.log,
         );
+      } else {
+        // The stall's share, held until pickup (retried by the job if Razorpay is down).
+        await ensureTransfer(app.db, opts.gateway, mine.id, req.log);
       }
       return {
         order: toOrderResponse(await getOrderForUser(app.db, mine.id, req.auth!.userId), opts.qrSecret),

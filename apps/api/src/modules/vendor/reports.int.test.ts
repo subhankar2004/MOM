@@ -214,7 +214,7 @@ describe('GET /v1/vendor/stalls/:stallId/reports', () => {
     // Cash dues: 2 × (₹1.20 + ₹6.00) owed, ₹5 paid back; outstanding also includes the old
     // ₹9.99 entry and the −₹1 adjustment.
     expect(r.dues).toEqual({ owedPaise: 1440, settledPaise: 500, outstandingPaise: 1440 + 999 - 500 - 100 });
-    expect(r.payouts).toEqual({ upiDuePaise: 24000, transfersReceivedPaise: null });
+    expect(r.payouts).toEqual({ upiDuePaise: 24000, transfersReceivedPaise: 0 });
 
     expect(r.daily.map((d: { day: string }) => d.day)).toEqual([from, istDate(0), to]);
     const sum = (k: string) => r.daily.reduce((s: number, d: Record<string, number>) => s + d[k]!, 0);

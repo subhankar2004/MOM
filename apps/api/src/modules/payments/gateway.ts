@@ -26,6 +26,27 @@ export interface PaymentGateway {
   /** Where Razorpay pays the stall. Bank details go to Razorpay only; MOM never stores them. */
   setSettlementAccount(accountId: string, productId: string, bank: BankAccount): Promise<RouteProduct>;
   fetchRoute(accountId: string, productId: string): Promise<RouteProduct>;
+
+  // ── Route transfers: pay a stall its share of a UPI payment (spec §4.2 step 6) ──
+  /** Moves `amountPaise` of a captured payment to the stall's linked account, held until released. */
+  createTransfer(
+    paymentId: string,
+    input: { account: string; amountPaise: number; orderId: string },
+  ): Promise<RouteTransfer>;
+  /** Transfers already made from a payment (to adopt one if our record of it was lost). */
+  listTransfers(paymentId: string): Promise<RouteTransfer[]>;
+  /** Lets Razorpay settle a held transfer to the stall's bank. */
+  releaseTransfer(transferId: string): Promise<void>;
+  /** Takes a transfer back from the stall (the order was refunded). Returns the reversal id. */
+  reverseTransfer(transferId: string, amountPaise: number): Promise<{ id: string }>;
+}
+
+export interface RouteTransfer {
+  id: string;
+  amountPaise: number;
+  onHold: boolean;
+  /** MOM order id we put in the transfer's notes. */
+  orderId: string | null;
 }
 
 export interface LinkedAccountInput {
@@ -173,6 +194,49 @@ export class RazorpayGateway implements PaymentGateway {
     );
   }
 
+  async createTransfer(paymentId: string, input: { account: string; amountPaise: number; orderId: string }) {
+    const res = await this.call<{ items: RawTransfer[] }>(
+      `/payments/${encodeURIComponent(paymentId)}/transfers`,
+      {
+        transfers: [
+          {
+            account: input.account,
+            amount: input.amountPaise,
+            currency: 'INR',
+            // Held until the student collects the food (released then, reversed if refunded).
+            on_hold: true,
+            notes: { mom_order_id: input.orderId },
+            linked_account_notes: ['mom_order_id'],
+          },
+        ],
+      },
+    );
+    return toTransfer(res.items[0]!);
+  }
+
+  async listTransfers(paymentId: string) {
+    const res = await this.call<{ items: RawTransfer[] }>(
+      `/payments/${encodeURIComponent(paymentId)}/transfers`,
+      undefined,
+      'GET',
+    );
+    return res.items.map(toTransfer);
+  }
+
+  async releaseTransfer(transferId: string) {
+    await this.call(`/transfers/${encodeURIComponent(transferId)}`, { on_hold: false }, 'PATCH');
+  }
+
+  async reverseTransfer(transferId: string, amountPaise: number) {
+    const reversal = await this.call<{ id: string }>(
+      `/transfers/${encodeURIComponent(transferId)}/reversals`,
+      {
+        amount: amountPaise,
+      },
+    );
+    return { id: reversal.id };
+  }
+
   async fetchRoute(accountId: string, productId: string) {
     return toRouteProduct(
       await this.call<RawRouteProduct>(
@@ -182,6 +246,23 @@ export class RazorpayGateway implements PaymentGateway {
       ),
     );
   }
+}
+
+interface RawTransfer {
+  id: string;
+  amount: number;
+  on_hold?: boolean;
+  notes?: Record<string, string> | unknown[];
+}
+
+function toTransfer(raw: RawTransfer): RouteTransfer {
+  const notes = raw.notes && !Array.isArray(raw.notes) ? raw.notes : {};
+  return {
+    id: raw.id,
+    amountPaise: raw.amount,
+    onHold: raw.on_hold ?? false,
+    orderId: notes.mom_order_id ?? null,
+  };
 }
 
 interface RawRouteProduct {
@@ -262,6 +343,48 @@ export class FakeGateway implements PaymentGateway {
     this.maybeFail();
     this.accounts.get(accountId)!.bank = bank;
     return { id: productId, activationStatus: 'under_review' as const, requirements: [] };
+  }
+
+  /** Transfers made so far, by id (tests inspect them). */
+  readonly transfers = new Map<
+    string,
+    {
+      paymentId: string;
+      account: string;
+      amountPaise: number;
+      orderId: string;
+      onHold: boolean;
+      reversed: number;
+    }
+  >();
+
+  async createTransfer(paymentId: string, input: { account: string; amountPaise: number; orderId: string }) {
+    this.maybeFail();
+    const id = `trf_fake${randomBytes(6).toString('hex')}`;
+    this.transfers.set(id, { paymentId, ...input, onHold: true, reversed: 0 });
+    return { id, amountPaise: input.amountPaise, onHold: true, orderId: input.orderId };
+  }
+
+  async listTransfers(paymentId: string) {
+    this.maybeFail();
+    return [...this.transfers.entries()]
+      .filter(([, t]) => t.paymentId === paymentId)
+      .map(([id, t]) => ({ id, amountPaise: t.amountPaise, onHold: t.onHold, orderId: t.orderId }));
+  }
+
+  async releaseTransfer(transferId: string) {
+    this.maybeFail();
+    const t = this.transfers.get(transferId);
+    if (!t) throw new PaymentGatewayError('invalid transfer_id', 400);
+    t.onHold = false;
+  }
+
+  async reverseTransfer(transferId: string, amountPaise: number) {
+    this.maybeFail();
+    const t = this.transfers.get(transferId);
+    if (!t) throw new PaymentGatewayError('invalid transfer_id', 400);
+    t.reversed += amountPaise;
+    return { id: `rvrsl_fake${randomBytes(6).toString('hex')}` };
   }
 
   /** Razorpay "approves" the account the first time its status is checked. */

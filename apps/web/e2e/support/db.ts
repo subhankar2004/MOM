@@ -39,6 +39,7 @@ export function resetTestUsers() {
     // suspended (hidden from students) and renamed so the next run can reuse the slug.
     const deletable = `select o.id from orders o join stalls s on s.id = o.stall_id
        where s.slug like 'e2e-%' and not exists (select 1 from ledger_entries l where l.order_id = o.id)`;
+    await db.query(`delete from transfers where order_id in (${deletable})`);
     await db.query(`delete from refunds where order_id in (${deletable})`);
     await db.query(`delete from payments where order_id in (${deletable})`);
     await db.query(`delete from orders where id in (${deletable})`);

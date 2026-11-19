@@ -1,6 +1,15 @@
 import { aliasedTable, and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import type { Db } from '../../db/client.js';
-import { auditLog, orderItems, orders, payments, refunds, stalls, users } from '../../db/schema/index.js';
+import {
+  auditLog,
+  orderItems,
+  orders,
+  payments,
+  refunds,
+  stalls,
+  transfers,
+  users,
+} from '../../db/schema/index.js';
 import { audit } from '../../lib/audit.js';
 import { AppError, badRequest, notFound } from '../../lib/errors.js';
 import type { ActorMeta } from '../access/access.service.js';
@@ -113,7 +122,7 @@ export class OrdersAdminService {
     if (!row) throw notFound('Order not found');
     const o = row.order;
     const actor = aliasedTable(users, 'actor');
-    const [items, paymentRows, refundRows, events] = await Promise.all([
+    const [items, paymentRows, refundRows, events, [payout]] = await Promise.all([
       this.db
         .select({
           name: orderItems.nameSnapshot,
@@ -158,6 +167,16 @@ export class OrdersAdminService {
         .leftJoin(actor, eq(actor.id, auditLog.actorId))
         .where(and(eq(auditLog.entity, 'order'), eq(auditLog.entityId, orderId)))
         .orderBy(asc(auditLog.createdAt), asc(auditLog.id)),
+      this.db
+        .select({
+          status: transfers.status,
+          amountPaise: transfers.amountPaise,
+          providerTransferId: transfers.providerTransferId,
+          lastError: transfers.lastError,
+          releasedAt: transfers.releasedAt,
+        })
+        .from(transfers)
+        .where(eq(transfers.orderId, orderId)),
     ]);
 
     // Status timestamps (always there), plus who did what from the audit log.
@@ -204,6 +223,8 @@ export class OrdersAdminService {
       payments: paymentRows,
       refunds: refundRows,
       timeline,
+      /** The stall's UPI payout (Route transfer), if any. */
+      payout: payout ?? null,
       can: {
         cancel: !FINISHED.includes(o.status),
         refund: canRefund(o),

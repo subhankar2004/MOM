@@ -2,6 +2,8 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { requireRole, requireStallAccess } from '../../plugins/authz.js';
 import { istDay } from '../orders/orders.service.js';
+import { stallStatement } from '../finance/settlements.service.js';
+import { statementSchema } from '../finance/statement.schema.js';
 import { stallReport } from './reports.service.js';
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD');
@@ -42,7 +44,7 @@ export const reportsRoutes: FastifyPluginAsyncZod<{ now?: () => Date }> = async 
               netPaise: paise,
             }),
             dues: z.object({ owedPaise: paise, settledPaise: paise, outstandingPaise: paise }),
-            payouts: z.object({ upiDuePaise: paise, transfersReceivedPaise: paise.nullable() }),
+            payouts: z.object({ upiDuePaise: paise, transfersReceivedPaise: paise }),
             daily: z.array(
               z.object({
                 day: z.string(),
@@ -62,5 +64,19 @@ export const reportsRoutes: FastifyPluginAsyncZod<{ now?: () => Date }> = async 
       const to = req.query.to ?? today;
       return stallReport(app.db, req.params.stallId, { from: req.query.from ?? to, to });
     },
+  );
+
+  app.get(
+    '/stalls/:stallId/statement',
+    {
+      schema: {
+        tags: ['vendor'],
+        summary: 'My statement: what the stall owes MOM, line by line, and UPI payouts (India dates)',
+        params: z.object({ stallId: z.uuid('Not a valid stall id') }),
+        querystring: z.object({ from: date, to: date }),
+        response: { 200: statementSchema },
+      },
+    },
+    async (req) => stallStatement(app.db, req.params.stallId, req.query),
   );
 };

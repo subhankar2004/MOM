@@ -124,7 +124,8 @@ SALES (owners)
   - Sales (orders handed over), UPI and cash split, MOM's fees.
   - "Cash fees owed to MOM": with cash orders you keep the student's whole payment, so MOM's
     fees on those orders are owed back to MOM.
-  - "UPI payouts": your UPI sales, paid to your bank by Razorpay.
+  - "UPI payouts": your UPI sales, paid to your bank by Razorpay once each order is
+    collected (held until then, taken back if the order is refunded).
   - A daily chart (hover or tap a bar for details, or "Show as a table") and
     "Download CSV" for Excel / Google Sheets.
 
@@ -148,6 +149,20 @@ REVENUE
   - Last 30 days, 12 weeks or 12 months: MOM revenue, platform fees, cash fees, refunds;
     a chart of fees per day/week/month; UPI vs cash orders; commission per stall.
   - "Download CSV" (by period, or by stall) for Excel / Google Sheets.
+
+SETTLEMENTS
+  - What each stall owes MOM (fees on cash orders), UPI money held until pickup, UPI
+    money paid out to stalls in the last week, and payout problems.
+  - How UPI money reaches a stall: when a student pays, Razorpay holds the food money for
+    the stall; when the stall hands the food over it's paid to the stall's bank; if the
+    order is refunded, it's taken back (MOM keeps only its 1% fee). If Razorpay is down,
+    MOM retries every 5 minutes; a payout that keeps failing shows "Retry payout" on the
+    order's page.
+  - Open a stall for its statement (last week / this week / this month): opening balance,
+    each fee, adjustment and payment with a running balance, and the closing balance.
+    "Download CSV" or "Print / save PDF".
+  - "Record cash received" when a stall pays its cash fees (it can't be more than what
+    they owe). The statement then shows the payment and the new balance.
 
 STALLS — adding a stall and its owner
   1. "Stalls" → "Add stall": name, where it is, food types. It starts as a DRAFT
@@ -202,8 +217,8 @@ ORDERS
   - Refund… (with a reason): money back for a finished UPI order (e.g. a complaint after
     pickup) without changing the order. Cash orders have no online payment to refund.
 
-Coming next (these pages still show "coming soon"): Settlements, Platform settings and
-the Audit log (issues #26–#27).
+Coming next (these pages still show "coming soon"): Platform settings and the Audit log
+(issue #27).
 
 
 ------------------------------------------------------------------------

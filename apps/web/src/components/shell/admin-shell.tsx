@@ -37,7 +37,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   return (
     <div className="lg:flex">
       <SkipLink />
-      <aside className="hidden w-64 shrink-0 flex-col gap-6 border-r border-border bg-surface p-4 lg:sticky lg:top-0 lg:flex lg:h-dvh">
+      <aside className="hidden w-64 print:hidden shrink-0 flex-col gap-6 border-r border-border bg-surface p-4 lg:sticky lg:top-0 lg:flex lg:h-dvh">
         <div className="flex items-center gap-2">
           <Logo />
           <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold text-ink-muted">
@@ -47,7 +47,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         <SideNav items={NAV} label="Admin" />
       </aside>
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-border bg-surface/95 px-4 backdrop-blur">
+        <header className="sticky top-0 z-30 print:hidden flex h-14 items-center justify-between gap-2 border-b border-border bg-surface/95 px-4 backdrop-blur">
           <div className="flex items-center gap-2 lg:hidden">
             <IconButton
               label="Open menu"

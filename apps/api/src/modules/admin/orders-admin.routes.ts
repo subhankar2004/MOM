@@ -73,6 +73,15 @@ const orderDetail = z.object({
     }),
   ),
   timeline: z.array(z.object({ at: z.date(), label: z.string(), by: z.string().nullable() })),
+  payout: z
+    .object({
+      status: z.enum(['created', 'on_hold', 'released', 'reversed', 'failed']),
+      amountPaise: z.number().int(),
+      providerTransferId: z.string().nullable(),
+      lastError: z.string().nullable(),
+      releasedAt: z.date().nullable(),
+    })
+    .nullable(),
   can: z.object({ cancel: z.boolean(), refund: z.boolean() }),
 });
 

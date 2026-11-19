@@ -72,6 +72,22 @@ category chips that follow the scroll, dish rows (photo, veg mark, price, Add / 
 sheet, "Sold out" dishes that can't be added, and a banner when the stall is closed or paused. One
 stall per cart: adding from another stall asks first. A 50-dish menu is tested at 4× CPU slowdown.
 
+**Settlements: Route transfers & cash dues (#26):** when a UPI payment is confirmed (verify or
+webhook), the stall's food subtotal is sent to its Razorpay linked account as a **held** Route
+transfer (MOM keeps the platform fee); hand-over **releases** it; any refund **reverses** it (before
+pickup the money never left the hold). Each step is saved in `transfers`; a lost Razorpay response
+is recovered by listing the payment's transfers (tagged with our order id), so a stall is never paid
+twice. A pg-boss sweep every 5 minutes retries anything that didn't happen (creation gives up after 5
+attempts → failed, flagged by the money check, "Retry payout" on the admin order page);
+`transfer.failed` webhooks mark it too. Stalls without a linked account get no transfer. Cash dues:
+admins record cash a stall paid (`cash_settlements` + a ledger `settlement`, never more than owed,
+audited). `/admin/settlements` lists what every stall owes, UPI held / paid out and payout problems; a
+stall's statement (last week / this week / this month) shows opening balance, each fee, adjustment
+and payment with a running balance, closing balance and UPI payouts, with CSV and print-to-PDF.
+Stall owners can read their own statement (`GET /v1/vendor/stalls/:id/statement`), and their sales
+page now shows UPI money paid to their bank. Netting dues against transfers is not done (manual
+settlements cover the issue's "or").
+
 **Admin: overview, revenue & reconciliation (#25):** `/admin` shows today (India time): orders,
 order value, MOM revenue (from the ledger), failed payments, live orders by status, stalls open now,
 refunds waiting and the last money check. `/admin/revenue`: last 30 days / 12 weeks / 12 months;

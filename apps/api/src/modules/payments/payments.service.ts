@@ -4,6 +4,7 @@ import { ledgerEntries, orders, payments, refunds, users } from '../../db/schema
 import { audit } from '../../lib/audit.js';
 import { AppError, notFound } from '../../lib/errors.js';
 import { recordOrderFees } from '../finance/ledger.js';
+import { reverseTransfer } from '../finance/transfers.service.js';
 import { issueToken } from '../orders/orders.service.js';
 import { PaymentGatewayError, type PaymentGateway } from './gateway.js';
 
@@ -179,7 +180,7 @@ export async function refundOrder(
     throw paymentsDown(err instanceof PaymentGatewayError ? err.message : undefined);
   }
 
-  return db.transaction(async (tx) => {
+  const done = await db.transaction(async (tx) => {
     const [refund] = await tx
       .insert(refunds)
       .values({
@@ -230,6 +231,13 @@ export async function refundOrder(
     log.info({ orderId: input.orderId, refundId: refund!.id, status: result.status }, 'order refunded');
     return { refundId: refund!.id, status: result.status };
   });
+
+  // Take the stall's share back (still on hold unless the order was collected). If Razorpay
+  // can't do it now, the transfer job retries; the student's refund is already on its way.
+  await reverseTransfer(db, gateway, input.orderId, new Date(), log).catch((err: unknown) =>
+    log.error({ err, orderId: input.orderId }, 'transfer reversal could not start'),
+  );
+  return done;
 }
 
 /** Background job: UPI orders not paid in time become `expired` (spec §4.2 step 5). */

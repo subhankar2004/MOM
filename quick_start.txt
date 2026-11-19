@@ -27,7 +27,8 @@ Done so far (GitHub issues, plan in spec.md)
   #23–#24 admin: stalls & onboarding (go-live checklist, UPI payouts),
           users & access, orders explorer (cancel / refund)
   #25     admin overview, revenue, nightly money check (reconciliation)
-  Next:   #26 settlements, #27 platform settings & audit log,
+  #26     settlements: UPI payouts to stalls (Razorpay Route), cash dues, statements
+  Next:   #27 platform settings & audit log,
           then #28–#30 deployment to AWS
 
 What runs where

@@ -83,6 +83,13 @@ function SettingsPage({ stallId }: { stallId: string }) {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="font-display text-3xl font-bold">Settings</h1>
+      {(data.platform.orderingPaused || !data.platform.cashEnabled) && (
+        <p role="status" className="rounded-(--radius-control) bg-warning-soft px-3 py-2 font-medium">
+          {data.platform.orderingPaused
+            ? 'MOM has paused ordering at every stall for now. Your settings are kept.'
+            : 'MOM has turned cash payments off at every stall for now. Students can pay by UPI.'}
+        </p>
+      )}
       <StatusSection data={data} save={save} busy={update.isPending} />
       <PaymentsSection data={data} save={save} busy={update.isPending} />
       <HoursSection key={JSON.stringify(data.hours)} stallId={stallId} hours={data.hours} />

@@ -57,6 +57,13 @@
       "when": 1795108214839,
       "tag": "0007_transfer_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795109413302,
+      "tag": "0008_global_flags",
+      "breakpoints": true
     }
   ]
 }

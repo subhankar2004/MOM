@@ -31,6 +31,7 @@ const settingsResponse = z.object({
     payments: z.object({ upi: z.boolean(), cash: z.boolean() }),
   }),
   hours: z.array(slot),
+  platform: z.object({ cashEnabled: z.boolean(), orderingPaused: z.boolean() }),
   availability: z.object({
     state: z.enum(['open', 'paused', 'closed']),
     reason: z.enum(['hours', 'override', 'paused', 'inactive']),

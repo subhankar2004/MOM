@@ -123,6 +123,17 @@ export async function placeOrder(
       const [stall] = await tx.select().from(stalls).where(eq(stalls.id, input.stallId));
       if (!stall || stall.status !== 'active') throw notFound('This stall is no longer on MOM');
       const hours = await tx.select().from(stallHours).where(eq(stallHours.stallId, stall.id));
+      const settings = await getCurrentSettings(tx);
+      if (settings.orderingPaused) {
+        throw new AppError(
+          409,
+          'STALL_UNAVAILABLE',
+          'MOM has paused ordering for a while. Try again later.',
+          {
+            state: 'paused',
+          },
+        );
+      }
       const state = availability(
         {
           status: stall.status,
@@ -145,7 +156,7 @@ export async function placeOrder(
       const upiAccepted = input.upiOnline && stall.upiEnabled && stall.routeStatus === 'activated';
       if (
         (input.paymentMethod === 'upi' && !upiAccepted) ||
-        (input.paymentMethod === 'cash' && !stall.cashEnabled)
+        (input.paymentMethod === 'cash' && !(stall.cashEnabled && settings.cashEnabledGlobally))
       ) {
         throw new AppError(
           409,
@@ -172,7 +183,7 @@ export async function placeOrder(
         return { item, quantity: wanted.quantity, lineTotalPaise: item.pricePaise * wanted.quantity };
       });
 
-      const settings = await getCurrentSettings(tx);
+      // settings: loaded above, with the stall checks.
       const rates = { platformFeeBps: settings.platformFeeBps, cashFeeBps: settings.cashFeeBps };
       const subtotal = lines.reduce((sum, l) => sum + l.lineTotalPaise, 0);
       const fees = calcFees(subtotal, input.paymentMethod, rates);

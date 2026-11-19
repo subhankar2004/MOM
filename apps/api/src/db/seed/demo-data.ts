@@ -37,6 +37,8 @@ export const DEFAULT_SETTINGS = {
   orderExpiryMinutes: 15,
   congestionLowMaxMinutes: 10,
   congestionModerateMaxMinutes: 20,
+  cashEnabledGlobally: true,
+  orderingPaused: false,
 } as const;
 
 export const DEMO_STALLS: DemoStall[] = [

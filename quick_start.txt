@@ -28,7 +28,9 @@ Done so far (GitHub issues, plan in spec.md)
           users & access, orders explorer (cancel / refund)
   #25     admin overview, revenue, nightly money check (reconciliation)
   #26     settlements: UPI payouts to stalls (Razorpay Route), cash dues, statements
-  Next:   #27 platform settings & audit log,
+  #27     platform settings (fees, limits, global switches) & audit log viewer
+          → every feature of v1 now works locally
+  Next:
           then #28–#30 deployment to AWS
 
 What runs where

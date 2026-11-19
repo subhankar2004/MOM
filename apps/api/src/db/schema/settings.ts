@@ -1,5 +1,15 @@
 import { sql } from 'drizzle-orm';
-import { bigint, check, index, integer, pgTable, smallint, timestamp, uuid } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  boolean,
+  check,
+  index,
+  integer,
+  pgTable,
+  smallint,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { createdAt } from './_common.js';
 import { users } from './users.js';
 
@@ -21,6 +31,10 @@ export const platformSettings = pgTable(
     /** Congestion meter: wait ≤ low → Low, ≤ moderate → Moderate, else Busy. */
     congestionLowMaxMinutes: smallint().notNull(),
     congestionModerateMaxMinutes: smallint().notNull(),
+    /** Global switch (spec A7 `cash_enabled_globally`): off = no stall takes cash. */
+    cashEnabledGlobally: boolean().notNull().default(true),
+    /** Global switch: on = no new orders anywhere (e.g. campus holiday, an incident). */
+    orderingPaused: boolean().notNull().default(false),
     effectiveFrom: timestamp({ withTimezone: true }).notNull().defaultNow(),
     createdBy: uuid().references(() => users.id, { onDelete: 'set null' }),
     createdAt: createdAt(),

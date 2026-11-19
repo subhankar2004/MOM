@@ -169,7 +169,7 @@ export class StallsService {
         {
           status: s.status,
           isOpenOverride: s.isOpenOverride,
-          acceptingOrders: s.acceptingOrders,
+          acceptingOrders: s.acceptingOrders && !settings.orderingPaused,
           hours: hours.filter((h) => h.stallId === s.id),
         },
         now,
@@ -185,7 +185,7 @@ export class StallsService {
       // UPI needs an activated Razorpay Route account, whatever the toggle says (spec §6.2 V7).
       payments: {
         upi: (this.options.upiOnline ?? true) && s.upiEnabled && s.routeStatus === 'activated',
-        cash: s.cashEnabled,
+        cash: s.cashEnabled && settings.cashEnabledGlobally,
       },
       startingPricePaise: prices.find((p) => p.stallId === s.id)?.min ?? null,
       dishes: dishes

@@ -45,12 +45,16 @@ export function resetTestUsers() {
     await db.query(`delete from orders where id in (${deletable})`);
     await db.query(
       `update stalls set status = 'suspended', slug = 'retired-' || replace(id::text, '-', ''),
-           name = left('Retired ' || name, 60)
+           name = left('Retired ' || name, 60), razorpay_account_id = null
        where slug like 'e2e-%' and exists (select 1 from orders o where o.stall_id = stalls.id)`,
     );
     await db.query(
       `delete from stall_members where stall_id in (select id from stalls where slug like 'retired-%')`,
     );
+    // Linked-account ids are unique: free them on stalls retired by older runs.
+    await db.query(`update stalls set razorpay_account_id = null where slug like 'retired-%'`);
+    // A settings change left scheduled by an interrupted run would block saving settings.
+    await db.query(`delete from platform_settings where effective_from > now()`);
     // Stalls retired by older runs, from before they were renamed too.
     await db.query(
       `update stalls set name = left('Retired ' || name, 60) where slug like 'retired-%' and name not like 'Retired %'`,

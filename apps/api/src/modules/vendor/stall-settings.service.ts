@@ -4,6 +4,7 @@ import { stallHours, stalls } from '../../db/schema/index.js';
 import { audit } from '../../lib/audit.js';
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { assertUploadedImage, type ImageStorage } from '../menu/image-storage.js';
+import { getCurrentSettings, type PlatformSettings } from '../settings/settings.service.js';
 import { availability, type HoursSlot } from '../stalls/availability.js';
 
 type StallRow = typeof stalls.$inferSelect;
@@ -91,7 +92,7 @@ export class StallSettingsService {
     const [stall] = await this.db.select().from(stalls).where(eq(stalls.id, stallId));
     if (!stall) throw notFound('Stall not found');
     const hours = await this.hours(this.db, stallId);
-    return this.view(stall, hours, now);
+    return this.view(stall, hours, now, await getCurrentSettings(this.db));
   }
 
   async update(stallId: string, patch: SettingsPatch, actor: Actor, now: Date) {
@@ -123,7 +124,10 @@ export class StallSettingsService {
         throw conflict('Keep at least one payment method on. To stop new orders, pause them instead.');
       }
       if (Object.keys(changes).length === 0) {
-        return { view: this.view(before, await this.hours(tx, stallId), now), oldPhoto: null };
+        return {
+          view: this.view(before, await this.hours(tx, stallId), now, await getCurrentSettings(tx)),
+          oldPhoto: null,
+        };
       }
 
       const [saved] = await tx.update(stalls).set(changes).where(eq(stalls.id, stallId)).returning();
@@ -138,7 +142,10 @@ export class StallSettingsService {
         userAgent: actor.userAgent,
       });
       const replaced = changes.photoKey !== undefined && before.photoKey ? before.photoKey : null;
-      return { view: this.view(saved!, await this.hours(tx, stallId), now), oldPhoto: replaced };
+      return {
+        view: this.view(saved!, await this.hours(tx, stallId), now, await getCurrentSettings(tx)),
+        oldPhoto: replaced,
+      };
     });
     if (oldPhoto) await this.storage.delete(oldPhoto).catch(() => {});
     return view;
@@ -167,7 +174,7 @@ export class StallSettingsService {
         ip: actor.ip,
         userAgent: actor.userAgent,
       });
-      return this.view(stall, after, now);
+      return this.view(stall, after, now, await getCurrentSettings(tx));
     });
   }
 
@@ -184,7 +191,7 @@ export class StallSettingsService {
     }));
   }
 
-  private view(stall: StallRow, hours: HoursSlot[], now: Date) {
+  private view(stall: StallRow, hours: HoursSlot[], now: Date, platform: PlatformSettings) {
     return {
       settings: {
         name: stall.name,
@@ -201,14 +208,19 @@ export class StallSettingsService {
         cashEnabled: stall.cashEnabled,
         routeStatus: stall.routeStatus,
         /** What students see: UPI needs the switch, an active settlement account and a gateway. */
-        payments: { upi: this.upiOnline && upiUsable(stall), cash: stall.cashEnabled },
+        payments: {
+          upi: this.upiOnline && upiUsable(stall),
+          cash: stall.cashEnabled && platform.cashEnabledGlobally,
+        },
       },
+      /** MOM's switches for every stall (spec A7), so the page can explain them. */
+      platform: { cashEnabled: platform.cashEnabledGlobally, orderingPaused: platform.orderingPaused },
       hours,
       availability: availability(
         {
           status: stall.status,
           isOpenOverride: stall.isOpenOverride,
-          acceptingOrders: stall.acceptingOrders,
+          acceptingOrders: stall.acceptingOrders && !platform.orderingPaused,
           hours,
         },
         now,

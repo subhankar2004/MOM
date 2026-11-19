@@ -136,6 +136,19 @@ SALES (owners)
 Your number is made a super admin by the MOM team (it's listed in the server settings).
 After signing in you land in the admin console.
 
+OVERVIEW (the first page)
+  - Today in India time: orders, what students are paying, MOM's revenue (fees earned,
+    after refunds), failed UPI payments; live orders (new / preparing / ready); how many
+    stalls are open; and what needs attention (refunds to retry, the last money check).
+  - Money check: every night at 2:30 AM the books are checked against every order and its
+    Razorpay payment from the last 7 days. "Run now" checks immediately. Each problem
+    links to its order.
+
+REVENUE
+  - Last 30 days, 12 weeks or 12 months: MOM revenue, platform fees, cash fees, refunds;
+    a chart of fees per day/week/month; UPI vs cash orders; commission per stall.
+  - "Download CSV" (by period, or by stall) for Excel / Google Sheets.
+
 STALLS — adding a stall and its owner
   1. "Stalls" → "Add stall": name, where it is, food types. It starts as a DRAFT
      (students can't see it).
@@ -189,8 +202,8 @@ ORDERS
   - Refund… (with a reason): money back for a finished UPI order (e.g. a complaint after
     pickup) without changing the order. Cash orders have no online payment to refund.
 
-Coming next (these pages still show "coming soon"): Overview, Revenue, Settlements,
-Platform settings and the Audit log (issues #25–#27).
+Coming next (these pages still show "coming soon"): Settlements, Platform settings and
+the Audit log (issues #26–#27).
 
 
 ------------------------------------------------------------------------

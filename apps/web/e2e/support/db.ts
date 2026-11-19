@@ -43,11 +43,16 @@ export function resetTestUsers() {
     await db.query(`delete from payments where order_id in (${deletable})`);
     await db.query(`delete from orders where id in (${deletable})`);
     await db.query(
-      `update stalls set status = 'suspended', slug = 'retired-' || replace(id::text, '-', '')
+      `update stalls set status = 'suspended', slug = 'retired-' || replace(id::text, '-', ''),
+           name = left('Retired ' || name, 60)
        where slug like 'e2e-%' and exists (select 1 from orders o where o.stall_id = stalls.id)`,
     );
     await db.query(
       `delete from stall_members where stall_id in (select id from stalls where slug like 'retired-%')`,
+    );
+    // Stalls retired by older runs, from before they were renamed too.
+    await db.query(
+      `update stalls set name = left('Retired ' || name, 60) where slug like 'retired-%' and name not like 'Retired %'`,
     );
     await db.query(`delete from stalls where slug like 'e2e-%'`);
     await db.query(`delete from auth_otps where phone like $1`, [like]);

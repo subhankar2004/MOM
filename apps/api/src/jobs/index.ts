@@ -1,6 +1,7 @@
 import { PgBoss } from 'pg-boss';
 import type { Db } from '../db/client.js';
 import { expireUnpaidOrders } from '../modules/payments/payments.service.js';
+import { reconcile } from '../modules/finance/reconcile.service.js';
 import { resetStallOverrides } from '../modules/stalls/stalls.service.js';
 
 interface JobLogger {
@@ -11,6 +12,7 @@ interface JobLogger {
 export const JOBS = {
   resetStallOverrides: 'stalls.reset-overrides',
   expireUnpaidOrders: 'orders.expire-unpaid',
+  reconcile: 'finance.reconcile',
 } as const;
 
 /**
@@ -37,6 +39,14 @@ export async function startJobs(databaseUrl: string, db: Db, log: JobLogger): Pr
   await boss.work(JOBS.expireUnpaidOrders, async () => {
     const n = await expireUnpaidOrders(db, new Date());
     if (n > 0) log.info({ job: JOBS.expireUnpaidOrders, expired: n }, 'unpaid orders expired');
+  });
+
+  // Every night at 02:30 India time: ledger vs orders vs Razorpay payments for the last 7 days
+  // (overlapping windows, so a late webhook or refund is checked again the next night).
+  await boss.createQueue(JOBS.reconcile);
+  await boss.schedule(JOBS.reconcile, '30 2 * * *', null, { tz: 'Asia/Kolkata', missed: 'once' });
+  await boss.work(JOBS.reconcile, async () => {
+    await reconcile(db, { now: new Date(), days: 7, startedBy: null }, log);
   });
 
   log.info({ jobs: Object.values(JOBS) }, 'background jobs started');

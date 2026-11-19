@@ -121,6 +121,7 @@ describe('migrations + seed', () => {
       'orders',
       'payments',
       'platform_settings',
+      'reconciliation_runs',
       'refresh_tokens',
       'refunds',
       'stall_hours',
@@ -411,6 +412,27 @@ describe('append-only tables', () => {
       code: PG.insufficientPrivilege,
     });
     await expectDbError(client, 'delete from audit_log where id = $1', [entry.id], {
+      code: PG.insufficientPrivilege,
+    });
+  });
+
+  it('reconciliation runs can be added but never changed or removed', async () => {
+    const run = await insert('reconciliation_runs', {
+      period_start: new Date('2026-11-01T00:00:00Z'),
+      period_end: new Date('2026-11-08T00:00:00Z'),
+      orders_checked: 3,
+      status: 'ok',
+      issues: '[]',
+    });
+    await expectDbError(
+      client,
+      `update reconciliation_runs set status = 'mismatch' where id = $1`,
+      [run.id],
+      {
+        code: PG.insufficientPrivilege,
+      },
+    );
+    await expectDbError(client, 'delete from reconciliation_runs where id = $1', [run.id], {
       code: PG.insufficientPrivilege,
     });
   });

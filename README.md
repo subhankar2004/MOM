@@ -72,6 +72,19 @@ category chips that follow the scroll, dish rows (photo, veg mark, price, Add / 
 sheet, "Sold out" dishes that can't be added, and a banner when the stall is closed or paused. One
 stall per cart: adding from another stall asks first. A 50-dish menu is tested at 4× CPU slowdown.
 
+**Admin: overview, revenue & reconciliation (#25):** `/admin` shows today (India time): orders,
+order value, MOM revenue (from the ledger), failed payments, live orders by status, stalls open now,
+refunds waiting and the last money check. `/admin/revenue`: last 30 days / 12 weeks / 12 months;
+platform vs cash fees per period (stacked chart with tooltip and table), commission per stall
+(highest first), UPI/cash mix; CSVs by period and by stall. **Reconciliation** runs every night at
+02:30 IST (pg-boss) over the last 7 days, or on demand: for each order it compares what MOM should
+have earned (UPI: platform fee once paid, 0 once refunded; cash: platform + cash fee once received)
+with the ledger, checks confirmed UPI orders have a captured Razorpay payment for the exact total,
+that captured money shows on the order, that cash is only marked paid at hand-over, that ledger rows
+are booked to the order's stall, and warns about refunds stuck for over a day. Results are stored
+(append-only `reconciliation_runs`), shown on the overview, and a mismatch is logged at error level
+("reconciliation mismatch") for the alarm in #28. Admins can add ledger **adjustments** (audited).
+
 **Admin: users, access & orders (#24):** `/admin/users` searches by name or phone (filters: role,
 status; paginated). A user's page shows the stalls they manage, recent orders and signed-in devices,
 with: suspend (asks first; ends every session, open pages stop within 15 min) / reactivate, sign out
@@ -222,6 +235,8 @@ Fastify 5 + Zod. `npm run dev` serves it on <http://localhost:4000>:
 | `GET /v1/vendor/stalls`, `/stalls/:stallId`                                                                                                              | stall console: my stalls (members) / all (super admin)                                                                                        |
 | `GET`, `POST /v1/admin/stalls`; `GET`, `PATCH /v1/admin/stalls/:stallId`                                                                                 | super admin: list/search, create (draft), details, edit, go live (checklist enforced), suspend                                                |
 | `POST /v1/admin/stalls/:stallId/settlement-account` (+ `/refresh`, `/test-activate`)                                                                     | super admin: Razorpay Route linked account for UPI payouts (resumable); check status; test-mode activation                                    |
+| `GET /v1/admin/overview`; `GET /v1/admin/revenue?from&to&group=day\|week\|month`                                                                         | super admin: today's KPIs; revenue from the ledger by period, per stall, UPI/cash mix                                                         |
+| `GET /v1/admin/reconciliation`, `POST /reconciliation/run`; `POST /v1/admin/ledger/adjustments`                                                          | super admin: money-check runs (nightly + on demand); ledger corrections (audited)                                                             |
 | `GET /v1/admin/users` (`?q&role&status&before`), `GET /users/:userId`; `POST /users/:userId/{sign-out,cash-strikes/reset,super-admin}`                   | super admin: search users; detail; sign out everywhere; reset cash strikes; grant/revoke super admin (typed confirmation, last one protected) |
 | `GET /v1/admin/orders` (`?q&stallId&status&paymentMethod&paymentStatus&from&to&before`), `GET /orders/:orderId`; `POST /orders/:orderId/{cancel,refund}` | super admin: orders explorer with timeline; cancel or refund with a reason (audited)                                                          |
 | `DELETE /v1/admin/stalls/:stallId/members/:userId`; `DELETE /stalls/:stallId/invites?phone=`                                                             | super admin: remove someone from a stall (role follows remaining stalls); withdraw a pending registration                                     |

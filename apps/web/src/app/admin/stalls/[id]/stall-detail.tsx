@@ -8,6 +8,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { RouteStatusChip, StallStatusChip } from '@/components/admin/stall-chips';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ConfirmButton } from '@/components/ui/confirm-button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TextField } from '@/components/ui/text-field';
@@ -22,6 +23,7 @@ import {
   useAdminStall,
   useRefreshSettlement,
   useRegisterMember,
+  useRemovePerson,
   useSetUpSettlement,
   useTestActivate,
   useUpdateStall,
@@ -216,6 +218,7 @@ function ChecklistView({ checklist, onFix }: { checklist: Checklist; onFix: (pat
 
 function OwnersSection({ data }: { data: AdminStallDetail }) {
   const register = useRegisterMember(data.stall.id);
+  const remove = useRemovePerson(data.stall.id);
   const toast = useToast();
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<'owner' | 'staff'>('owner');
@@ -234,14 +237,48 @@ function OwnersSection({ data }: { data: AdminStallDetail }) {
                 <span className="font-semibold">{m.name ?? 'No name yet'}</span>
                 <span className="tabular block text-sm text-ink-muted">{m.phone}</span>
               </span>
-              <span className="text-sm text-ink-muted">{m.role === 'owner' ? 'Owner' : 'Staff'}</span>
+              <span className="flex items-center gap-1 text-sm text-ink-muted">
+                {m.role === 'owner' ? 'Owner' : 'Staff'}
+                <ConfirmButton
+                  label={`Remove ${m.name ?? m.phone ?? 'this person'} from the stall`}
+                  confirmLabel="Confirm remove"
+                  loading={remove.isPending}
+                  onConfirm={() =>
+                    remove.mutate(
+                      { userId: m.userId },
+                      {
+                        onSuccess: () => toast('Removed from the stall', 'success'),
+                        onError: (err) => toast(errorText(err), 'error'),
+                      },
+                    )
+                  }
+                >
+                  Remove
+                </ConfirmButton>
+              </span>
             </li>
           ))}
           {data.pending.map((p) => (
             <li key={p.phone} className="flex min-h-11 items-center justify-between gap-2 py-1">
               <span className="tabular">{p.phone}</span>
-              <span className="text-sm text-ink-muted">
+              <span className="flex items-center gap-1 text-sm text-ink-muted">
                 {p.role === 'owner' ? 'Owner' : 'Staff'} · hasn&apos;t signed in yet
+                <ConfirmButton
+                  label={`Withdraw ${p.phone}`}
+                  confirmLabel="Confirm withdraw"
+                  loading={remove.isPending}
+                  onConfirm={() =>
+                    remove.mutate(
+                      { phone: p.phone },
+                      {
+                        onSuccess: () => toast('Registration withdrawn', 'success'),
+                        onError: (err) => toast(errorText(err), 'error'),
+                      },
+                    )
+                  }
+                >
+                  Withdraw
+                </ConfirmButton>
               </span>
             </li>
           ))}

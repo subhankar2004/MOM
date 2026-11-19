@@ -93,6 +93,10 @@ export const userActions = {
     apiRequest(`${userPath(id)}/suspension`, { method: 'POST', body: { suspended } }),
   signOut: (id: string) => apiRequest(`${userPath(id)}/sign-out`, { method: 'POST' }),
   resetStrikes: (id: string) => apiRequest(`${userPath(id)}/cash-strikes/reset`, { method: 'POST' }),
+  removeFromStall: (id: string, stallId: string) =>
+    apiRequest(`/v1/admin/stalls/${encodeURIComponent(stallId)}/members/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
   superAdmin: (id: string, grant: boolean, confirmLast4: string) =>
     apiRequest(`${userPath(id)}/super-admin`, { method: 'POST', body: { grant, confirmLast4 } }),
 };

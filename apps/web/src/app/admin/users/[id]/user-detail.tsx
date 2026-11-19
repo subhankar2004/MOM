@@ -8,6 +8,7 @@ import { useState, type ReactNode } from 'react';
 import { OrderStatusChip } from '@/components/order/order-status-chip';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ConfirmButton } from '@/components/ui/confirm-button';
 import { DataTable } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Sheet } from '@/components/ui/sheet';
@@ -79,6 +80,9 @@ function Detail({ data }: { data: AdminUserDetail }) {
   const suspend = useUserAction(user.id, (suspended: boolean) => userActions.suspend(user.id, suspended));
   const signOut = useUserAction(user.id, () => userActions.signOut(user.id));
   const resetStrikes = useUserAction(user.id, () => userActions.resetStrikes(user.id));
+  const removeFromStall = useUserAction(user.id, (stallId: string) =>
+    userActions.removeFromStall(user.id, stallId),
+  );
   const [confirmSuspend, setConfirmSuspend] = useState(false);
   const [adminSheet, setAdminSheet] = useState(false);
   const isAdmin = user.role === 'super_admin';
@@ -124,16 +128,26 @@ function Detail({ data }: { data: AdminUserDetail }) {
               <h2 className="text-sm text-ink-muted">Manages</h2>
               <ul className="mt-1 flex flex-col gap-1">
                 {data.memberships.map((m) => (
-                  <li key={m.stallId}>
-                    <Link
-                      href={`/admin/stalls/${m.stallId}`}
-                      className="font-semibold underline-offset-2 hover:underline"
-                    >
-                      {m.stallName}
-                    </Link>{' '}
-                    <span className="text-sm text-ink-muted">
-                      ({m.role === 'owner' ? 'owner' : 'counter staff'})
+                  <li key={m.stallId} className="flex min-h-11 items-center justify-between gap-2">
+                    <span>
+                      <Link
+                        href={`/admin/stalls/${m.stallId}`}
+                        className="font-semibold underline-offset-2 hover:underline"
+                      >
+                        {m.stallName}
+                      </Link>{' '}
+                      <span className="text-sm text-ink-muted">
+                        ({m.role === 'owner' ? 'owner' : 'counter staff'})
+                      </span>
                     </span>
+                    <ConfirmButton
+                      label={`Remove from ${m.stallName}`}
+                      confirmLabel="Confirm remove"
+                      loading={removeFromStall.isPending && removeFromStall.variables === m.stallId}
+                      onConfirm={() => removeFromStall.mutate(m.stallId, done(`Removed from ${m.stallName}`))}
+                    >
+                      Remove
+                    </ConfirmButton>
                   </li>
                 ))}
               </ul>

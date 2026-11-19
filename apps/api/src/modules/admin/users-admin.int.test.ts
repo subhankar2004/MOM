@@ -229,3 +229,75 @@ describe('admin users: super admins', () => {
     expect((await w.call('GET', `/users/${fromSettings.id}`)).json().superAdminFromSettings).toBe(true);
   });
 });
+
+describe('admin users: stall roles', () => {
+  it('removing someone from a stall ends their console access at once; role follows their stalls', async () => {
+    const w = await world();
+    const owner = await w.make('vendor_owner', 'Two Stalls');
+    const mk = async (name: string) =>
+      (
+        await w.app.db
+          .insert(stalls)
+          .values({ slug: `roles-${++seq}`, name })
+          .returning()
+      )[0]!;
+    const a = await mk('Stall A');
+    const b = await mk('Stall B');
+    await w.app.db.insert(stallMembers).values([
+      { stallId: a.id, userId: owner.id, role: 'owner' },
+      { stallId: b.id, userId: owner.id, role: 'staff' },
+    ]);
+
+    const removeA = await w.app.app.inject({
+      method: 'DELETE',
+      url: `/v1/admin/stalls/${a.id}/members/${owner.id}`,
+      cookies: w.admin.cookies,
+    });
+    expect(removeA.statusCode).toBe(204);
+    // Their old token still says vendor_owner, but stall A is refused immediately.
+    const board = await w.app.app.inject({ url: `/v1/vendor/stalls/${a.id}/orders`, cookies: owner.cookies });
+    expect(board.statusCode).toBe(403);
+    expect((await w.call('GET', `/users/${owner.id}`)).json().user.role).toBe('vendor_staff');
+
+    await w.app.app.inject({
+      method: 'DELETE',
+      url: `/v1/admin/stalls/${b.id}/members/${owner.id}`,
+      cookies: w.admin.cookies,
+    });
+    expect((await w.call('GET', `/users/${owner.id}`)).json()).toMatchObject({
+      user: { role: 'student' },
+      memberships: [],
+    });
+    const again = await w.app.app.inject({
+      method: 'DELETE',
+      url: `/v1/admin/stalls/${b.id}/members/${owner.id}`,
+      cookies: w.admin.cookies,
+    });
+    expect(again.statusCode).toBe(404);
+    const removals = await w.app.db
+      .select()
+      .from(auditLog)
+      .where(and(eq(auditLog.action, 'stall.member.remove'), eq(auditLog.actorId, w.admin.id)));
+    expect(removals).toHaveLength(2);
+  });
+
+  it('withdraws a phone registered by mistake', async () => {
+    const w = await world();
+    const [stall] = await w.app.db
+      .insert(stalls)
+      .values({ slug: `inv-${++seq}`, name: 'Invite Stall' })
+      .returning();
+    await w.call('POST', `/stalls/${stall!.id}/members`, { phone: '98765 77777' });
+    const res = await w.app.app.inject({
+      method: 'DELETE',
+      url: `/v1/admin/stalls/${stall!.id}/invites?phone=9876577777`,
+      cookies: w.admin.cookies,
+    });
+    expect(res.statusCode).toBe(204);
+    expect((await w.call('GET', `/stalls/${stall!.id}/members`)).json().pending).toEqual([]);
+    // Signing in with that number now gives no stall access.
+    const s = await w.signIn('+919876577777');
+    const [u] = await w.app.db.select().from(users).where(eq(users.id, s.id));
+    expect(u!.role).toBe('student');
+  });
+});

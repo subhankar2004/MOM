@@ -3,7 +3,13 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { badRequest } from '../../lib/errors.js';
 import { requireSuperAdmin } from '../../plugins/authz.js';
-import { listStallMembers, registerStallMember, setUserSuspended } from '../access/access.service.js';
+import {
+  cancelStallInvite,
+  listStallMembers,
+  registerStallMember,
+  removeStallMember,
+  setUserSuspended,
+} from '../access/access.service.js';
 
 const phoneField = z.string().transform((v, ctx) => {
   const e164 = normalizeIndianMobile(v);
@@ -97,6 +103,39 @@ export const adminAccessRoutes: FastifyPluginAsyncZod = async (app) => {
         throw badRequest("You can't suspend your own account");
       }
       await setUserSuspended(app.db, req.params.userId, req.body.suspended, actor(req));
+      return reply.status(204).send(null);
+    },
+  );
+
+  app.delete(
+    '/stalls/:stallId/members/:userId',
+    {
+      schema: {
+        tags: ['admin'],
+        summary: 'Remove someone from a stall (their role follows the stalls they still have)',
+        params: z.object({ stallId: z.uuid('Not a valid stall id'), userId: z.uuid('Not a valid user id') }),
+        response: { 204: z.null() },
+      },
+    },
+    async (req, reply) => {
+      await removeStallMember(app.db, req.params.stallId, req.params.userId, actor(req));
+      return reply.status(204).send(null);
+    },
+  );
+
+  app.delete(
+    '/stalls/:stallId/invites',
+    {
+      schema: {
+        tags: ['admin'],
+        summary: "Withdraw a phone number registered for a stall that hasn't signed in yet",
+        params: z.object({ stallId: z.uuid('Not a valid stall id') }),
+        querystring: z.object({ phone: phoneField }),
+        response: { 204: z.null() },
+      },
+    },
+    async (req, reply) => {
+      await cancelStallInvite(app.db, req.params.stallId, req.query.phone, actor(req));
       return reply.status(204).send(null);
     },
   );

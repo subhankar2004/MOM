@@ -14,6 +14,8 @@ function roleFor(current: Role, memberships: MemberRole[]): Role {
   if (current === 'super_admin') return 'super_admin';
   if (memberships.includes('owner')) return 'vendor_owner';
   if (memberships.includes('staff')) return 'vendor_staff';
+  // Removed from their last stall: an ordinary student account again.
+  if (current === 'vendor_owner' || current === 'vendor_staff') return 'student';
   return current;
 }
 
@@ -161,6 +163,58 @@ export async function registerStallMember(
       userAgent: actor.userAgent,
     });
     return { inviteId: invite!.id, phone: input.phone, role: input.role, activeNow };
+  });
+}
+
+/**
+ * Super admin removes someone from a stall. Their stall console access ends at once (every
+ * vendor request checks membership in the database); their role follows the stalls they still
+ * have (none → student).
+ */
+export async function removeStallMember(db: Db, stallId: string, userId: string, actor: ActorMeta) {
+  await db.transaction(async (tx) => {
+    const [removed] = await tx
+      .delete(stallMembers)
+      .where(and(eq(stallMembers.stallId, stallId), eq(stallMembers.userId, userId)))
+      .returning();
+    if (!removed) throw notFound('This person is not a member of this stall');
+    const [user] = await tx.select().from(users).where(eq(users.id, userId));
+    await syncRole(tx, user!);
+    await audit(tx, {
+      actorId: actor.actorId,
+      action: 'stall.member.remove',
+      entity: 'stall',
+      entityId: stallId,
+      before: { userId, role: removed.role },
+      ip: actor.ip,
+      userAgent: actor.userAgent,
+    });
+  });
+}
+
+/** Super admin withdraws a phone registered for a stall that hasn't signed in yet. */
+export async function cancelStallInvite(db: Db, stallId: string, phone: string, actor: ActorMeta) {
+  await db.transaction(async (tx) => {
+    const [invite] = await tx
+      .delete(vendorInvites)
+      .where(
+        and(
+          eq(vendorInvites.stallId, stallId),
+          eq(vendorInvites.phone, phone),
+          isNull(vendorInvites.acceptedAt),
+        ),
+      )
+      .returning();
+    if (!invite) throw notFound('No pending registration for this number');
+    await audit(tx, {
+      actorId: actor.actorId,
+      action: 'stall.invite.cancel',
+      entity: 'stall',
+      entityId: stallId,
+      before: { phone, role: invite.role },
+      ip: actor.ip,
+      userAgent: actor.userAgent,
+    });
   });
 }
 

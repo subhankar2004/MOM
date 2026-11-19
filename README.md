@@ -77,7 +77,9 @@ status; paginated). A user's page shows the stalls they manage, recent orders an
 with: suspend (asks first; ends every session, open pages stop within 15 min) / reactivate, sign out
 everywhere, reset cash strikes, and make / remove super admin (typed confirmation: last 4 digits of
 their phone; at least one active super admin always remains; SUPER_ADMIN_PHONES numbers can't be
-removed here). **Admin API routes now also check the database on every request**, so a removed or
+removed here). Stall roles follow stall membership: "Remove" takes someone off a stall (their
+console access ends at once; with no stalls left they're a student again) and "Withdraw" cancels a
+phone registered by mistake. **Admin API routes now also check the database on every request**, so a removed or
 suspended admin loses admin access at once instead of when their 15-minute token expires.
 `/admin/orders` searches every order (#token, phone, name, order id; stall, status, payment and
 date filters) and shows the bill, payments, refunds and a timeline of who did what. Cancel (with a
@@ -222,6 +224,7 @@ Fastify 5 + Zod. `npm run dev` serves it on <http://localhost:4000>:
 | `POST /v1/admin/stalls/:stallId/settlement-account` (+ `/refresh`, `/test-activate`)                                                                     | super admin: Razorpay Route linked account for UPI payouts (resumable); check status; test-mode activation                                    |
 | `GET /v1/admin/users` (`?q&role&status&before`), `GET /users/:userId`; `POST /users/:userId/{sign-out,cash-strikes/reset,super-admin}`                   | super admin: search users; detail; sign out everywhere; reset cash strikes; grant/revoke super admin (typed confirmation, last one protected) |
 | `GET /v1/admin/orders` (`?q&stallId&status&paymentMethod&paymentStatus&from&to&before`), `GET /orders/:orderId`; `POST /orders/:orderId/{cancel,refund}` | super admin: orders explorer with timeline; cancel or refund with a reason (audited)                                                          |
+| `DELETE /v1/admin/stalls/:stallId/members/:userId`; `DELETE /stalls/:stallId/invites?phone=`                                                             | super admin: remove someone from a stall (role follows remaining stalls); withdraw a pending registration                                     |
 | `POST`, `GET /v1/admin/stalls/:stallId/members`                                                                                                          | super admin: register a stall owner's phone, list members + pending                                                                           |
 | `POST /v1/admin/users/:userId/suspension`                                                                                                                | super admin: suspend (ends all sessions) or reactivate                                                                                        |
 

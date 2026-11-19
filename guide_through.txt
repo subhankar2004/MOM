@@ -170,6 +170,9 @@ USERS & ACCESS
     minutes — and can't sign in until you tap "Reactivate account".
   - Sign out everywhere: ends all their sessions (e.g. a lost phone).
   - Reset cash strikes: lets a student order with cash again.
+  - Stall roles come from the stalls page: "Remove" (on the person's page or the stall's
+    "Owner & staff") takes them off a stall at once; with no stalls left they're a normal
+    student account. "Withdraw" cancels a phone number registered by mistake.
   - Make / Remove super admin…: type the last 4 digits of their phone to confirm.
     MOM always keeps at least one active super admin, and numbers listed in the server
     settings stay super admin. A removed admin loses admin access at once.

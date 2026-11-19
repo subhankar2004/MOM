@@ -1,5 +1,5 @@
 import { decodeJwt } from 'jose';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { afterEach, describe, expect, it } from 'vitest';
 import { auditLog, stallMembers, stalls, users } from '../../db/schema/index.js';
 import { createTestApp, testEnv, type TestApp } from '../../test/test-app.js';
@@ -205,6 +205,12 @@ describe('admin users: super admins', () => {
 
   it('always keeps one active super admin, and respects SUPER_ADMIN_PHONES', async () => {
     const w = await world({ SUPER_ADMIN_PHONES: '9437099999' });
+    // Only this test's admin is an active super admin (other tests may have left some behind;
+    // this change is rolled back with the test).
+    await w.app.db
+      .update(users)
+      .set({ status: 'suspended' })
+      .where(and(eq(users.role, 'super_admin'), ne(users.id, w.admin.id)));
     const last4 = w.admin.phone.slice(-4);
     const alone = await w.call('POST', `/users/${w.admin.id}/super-admin`, {
       grant: false,

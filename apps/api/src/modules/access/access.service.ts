@@ -4,6 +4,7 @@ import { refreshTokens, stallMembers, stalls, users, vendorInvites } from '../..
 import { audit } from '../../lib/audit.js';
 import { notFound } from '../../lib/errors.js';
 import type { Role } from '../auth/tokens.js';
+import { assertAnotherActiveSuperAdmin } from '../admin/users-admin.service.js';
 
 type UserRow = typeof users.$inferSelect;
 export type MemberRole = 'owner' | 'staff';
@@ -202,8 +203,11 @@ export async function stallsForUser(db: Db, userId: string, role: Role) {
  */
 export async function setUserSuspended(db: Db, userId: string, suspended: boolean, actor: ActorMeta) {
   return db.transaction(async (tx) => {
-    const [before] = await tx.select().from(users).where(eq(users.id, userId));
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('mom.super_admins'))`);
+    const [before] = await tx.select().from(users).where(eq(users.id, userId)).for('update');
     if (!before || before.deletedAt) throw notFound('User not found');
+    // Suspending the last active super admin would lock everyone out of the admin console.
+    if (suspended && before.role === 'super_admin') await assertAnotherActiveSuperAdmin(tx, userId);
     const status = suspended ? 'suspended' : 'active';
     await tx.update(users).set({ status }).where(eq(users.id, userId));
     if (suspended) {

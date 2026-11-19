@@ -9,7 +9,8 @@ import { Button, ButtonLink } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StatusChip, type ChipTone } from '@/components/ui/status-chip';
+import { SHORT_STATUS, STATUS_TONE as TONE } from '@/components/order/order-status-chip';
+import { StatusChip } from '@/components/ui/status-chip';
 import { Tabs } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api-client';
@@ -17,28 +18,6 @@ import { reorder, useActiveOrders, usePastOrders, type OrderSummary } from '@/li
 import { orderDateLabel } from '@/lib/time';
 
 type Tab = 'active' | 'past';
-
-const SHORT_STATUS: Record<OrderSummary['status'], string> = {
-  pending_payment: 'Waiting for payment',
-  placed: 'Placed',
-  preparing: 'Being prepared',
-  ready: 'Ready to collect',
-  collected: 'Collected',
-  rejected: 'Rejected',
-  cancelled: 'Cancelled',
-  expired: 'Not paid',
-};
-
-const TONE: Record<OrderSummary['status'], ChipTone> = {
-  pending_payment: 'warning',
-  placed: 'haldi',
-  preparing: 'haldi',
-  ready: 'success',
-  collected: 'neutral',
-  rejected: 'danger',
-  cancelled: 'neutral',
-  expired: 'neutral',
-};
 
 const REFUND_NOTE: Partial<Record<OrderSummary['paymentStatus'], string>> = {
   refund_pending: 'Refund on its way',

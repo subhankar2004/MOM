@@ -60,3 +60,16 @@ export function elapsedLabel(since: Date, now: Date): string {
   const m = minutes % 60;
   return m ? `${h} h ${m} min` : `${h} h`;
 }
+
+const dateTimeFmt = new Intl.DateTimeFormat('en-IN', {
+  timeZone: IST,
+  day: 'numeric',
+  month: 'short',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
+/** "18 Nov, 1:05 pm" in India time (admin tables and timelines). */
+export function formatDateTime(date: Date): string {
+  return dateTimeFmt.format(date);
+}

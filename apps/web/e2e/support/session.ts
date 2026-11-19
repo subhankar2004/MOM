@@ -20,6 +20,8 @@ export async function signIn(context: BrowserContext, phone: string, name = 'Ord
     headers,
   });
   if (!verify.ok()) throw new Error(`otp verify ${verify.status()} ${await verify.text()}`);
-  await context.request.patch(`${API_URL}/v1/me`, { data: { name }, headers });
+  const named = await context.request.patch(`${API_URL}/v1/me`, { data: { name }, headers });
+  // Names are letters only: fail here rather than leave a nameless test user.
+  if (!named.ok()) throw new Error(`setting name "${name}" failed: ${named.status()} ${await named.text()}`);
   await context.addInitScript(() => localStorage.setItem('mom.session', '1'));
 }

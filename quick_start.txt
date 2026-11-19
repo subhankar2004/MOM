@@ -1,180 +1,150 @@
-=====================================================================
-                    MOM  —  QUICK START GUIDE
-          (written for someone new to app development)
-=====================================================================
+MOM — QUICK START (local development on your Mac)
+==================================================
 
-WHERE WE ARE
-------------
-We are rebuilding MOM one GitHub issue at a time:
-    https://github.com/subhankar2004/MOM/issues
-The plan is in spec.md. The old prototype is saved under the git tag
-"prototype-v0".
+All commands run from the project folder, in the VS Code terminal
+(menu Terminal → New Terminal, or Ctrl + `):
 
-Done so far:
-  #1  project skeleton
-  #2  local database + image storage in Docker   ← you can start these
-  #3  automatic checks on GitHub for every PR (CI)
-  #4  database tables + 4 demo stalls with menus
-  #5  the API server (the "brain" the website will talk to)
-  #6  the website's look (colours, fonts, buttons…) and its 3 areas:
-      students, stall owners (/vendor) and admin (/admin)
-  #7  login with a phone number + 6-digit code (server side)
-  #8  the login screen, staying signed in, and who can open which area
-  #9  stall owners: registered by phone, and each sees only their stall
-  #10 each stall's open/closed status and how busy it is
-  #11 the home page: every stall, open first, with search and filters
-      (http://localhost:3000)
-  #12 each stall's menu: tap a stall → dishes by category, Add buttons
-  #13 the cart: saved on the phone, bill for UPI and cash, price checks
-  #14 checkout: place a CASH order and get a token number straight away
-  #15 pay by UPI / online with Razorpay (TEST mode — no real money)
-  #16 the token screen: big token number, QR code, pickup code, progress
-Coming next:
-  #4  database tables        #5  the API (server)      #6  the website
-This guide grows with every issue.
+    cd ~/Developer/myWorkSpace/MOM
 
-
-WORDS YOU WILL SEE
+Words you will see
 ------------------
-  Terminal   = the window where you type commands. In VS Code:
-               menu  Terminal → New Terminal   (or press  Ctrl + ` )
-  Command    = a line you type in the Terminal, then press Enter.
-               Only type the part AFTER the "$ " sign.
-  Docker     = runs the database for us inside "containers", so we don't
-               install Postgres on the Mac itself.
-  Volume     = Docker's folder where the database keeps its data. Ours:
-                   mom_pg_data   ← database (users, stalls, orders)
-                   mom_s3_data   ← uploaded images (menu photos)
-  .env file  = small private settings file. Never shared on GitHub.
-  Branch/PR  = see CONTRIBUTING.md
-  Ctrl + C   = stops a running program in the Terminal.
+  Terminal   the window where you type commands; press Enter after each one.
+  Docker     runs the database and photo storage in "containers", so nothing is
+             installed on the Mac itself. Data lives in Docker "volumes":
+             mom_pg_data (database) and mom_s3_data (photos).
+  .env file  private settings (secrets, keys). Never shared on GitHub.
+  Branch/PR  each issue is built on its own branch and merged through a pull request.
+  Ctrl + C   stops the program running in that terminal.
+
+Done so far (GitHub issues, plan in spec.md)
+--------------------------------------------
+  #1–#6   project skeleton, Docker databases, CI checks, database tables, API, website look
+  #7–#9   sign-in with phone + code; stall owners registered by phone
+  #10–#13 stall list with open/closed + busy meter, menus, cart
+  #14–#17 checkout (cash and UPI via Razorpay test mode), token + QR, My orders live
+  #18–#22 stall console: live order board, menu editor with photos, settings & hours,
+          QR scanner and hand-over, sales & dues
+  #23–#24 admin: stalls & onboarding (go-live checklist, UPI payouts),
+          users & access, orders explorer (cancel / refund)
+  Next:   #25 revenue, #26 settlements, #27 platform settings & audit log,
+          then #28–#30 deployment to AWS
+
+What runs where
+---------------
+  Docker (Docker Desktop must be running):
+    PostgreSQL 17 ........ localhost:5432   databases: mom (app), mom_test (tests)
+    SeaweedFS (S3) ....... localhost:8333   bucket mom-images (menu & stall photos)
+  Node (your terminal):
+    API (Fastify) ........ http://localhost:4000      health: /health, API docs: /docs
+    Website (Next.js) .... http://localhost:3000      student app; /vendor; /admin
 
 
-PART 1 — ONE-TIME SETUP (already done on this Mac ✅)
------------------------------------------------------
-On a NEW computer:
-    $ git clone https://github.com/subhankar2004/MOM.git
-    $ cd MOM
-    $ npm install
-    $ npm run setup          (creates the .env settings files and
-                              random login secrets for this computer)
+========================================================================
+START EVERYTHING (every day)
+========================================================================
+
+  1. Open Docker Desktop and wait until it says it's running.
+
+  2. Get the latest merged work (skip if you're in the middle of a branch):
+
+        git switch main
+        git pull
+        npm install            (only needed when packages changed; safe to run anyway)
+
+  3. Start the databases (Postgres + S3) in the background:
+
+        npm run db:up
+
+  4. Apply any new database changes (safe to run every time; does nothing if up to date):
+
+        npm run db:migrate
+
+  5. Start the API and the website together (leave this terminal open):
+
+        npm run dev
+
+     Wait for "[api] ... Server listening at http://127.0.0.1:4000" and "[web] ✓ Ready",
+     then open http://localhost:3000
+
+  Signing in locally: SMS_PROVIDER=console, so no SMS is sent. The 6-digit code is
+  PRINTED IN THE TERMINAL running `npm run dev`, in a line starting with
+  "📱 SMS (not really sent):".
+  Your admin number is the one in SUPER_ADMIN_PHONES in apps/api/.env.
 
 
-PART 2 — EVERY DAY: STARTING
-----------------------------
-1. Open "Docker Desktop" (Cmd + Space, type Docker, Enter).
-   Wait until it says it's running.
+========================================================================
+STOP EVERYTHING (end of the day)
+========================================================================
 
-2. In the VS Code Terminal:
-    $ cd /Users/subhankarpatra/Developer/myWorkSpace/MOM
-    $ git switch main
-    $ git pull               (gets the latest merged work)
-    $ npm install            (only needed if someone changed packages)
-    $ npm run db:up          (starts database + image storage)
-    $ npm run db:migrate     (applies any new database changes)
+  1. In the terminal running `npm run dev`, press  Ctrl + C  (stops API + website).
 
-   It finishes with "Healthy" for mom_postgres and mom_s3. ✅
+  2. Stop the databases (YOUR DATA IS KEPT):
 
-   Make yourself SUPER ADMIN (once): open apps/api/.env, put your mobile
-   number after  SUPER_ADMIN_PHONES=  (e.g. SUPER_ADMIN_PHONES=9876543210),
-   save, then run   $ npm run db:seed
+        npm run db:down
 
-3. Start the API (and, from issue #6, the website):
-    $ npm run dev
-   API:      http://localhost:4000/health   → {"status":"ok",...}
-   API docs: http://localhost:4000/docs     (every endpoint, try them out)
-   Website:  http://localhost:3000
-   Stall owner area:  http://localhost:3000/vendor
-   Admin area:        http://localhost:3000/admin
-   Style guide:       http://localhost:3000/dev/components
-                      (every button, card and colour in one page;
-                       the round button top-right switches light/dark)
-   Stop it with  Ctrl + C.
+  3. Optionally quit Docker Desktop.
 
-   Login codes (OTP) are NOT sent by SMS on your Mac — they are printed
-   in this Terminal, in a line starting with  📱 SMS (not really sent).
-   To sign in: open http://localhost:3000/login, type your number,
-   copy the 6-digit code from this Terminal into the boxes.
-   Your number is in SUPER_ADMIN_PHONES (apps/api/.env), so you land
-   on the admin area (/admin). Any other number becomes a student.
+  If a port is still busy next time ("EADDRINUSE :4000" or ":3000"):
 
-   Make a number a STALL OWNER (until the admin screens arrive in #23):
-   API docs http://localhost:4000/docs (signed in as you, the admin) →
-   "vendor" → GET /v1/vendor/stalls → copy a stall's "id" → "admin" →
-   POST /v1/admin/stalls/{stallId}/members with {"phone": "98765 43210"}.
-   That number signs in at /login and lands on its stall console.
+        lsof -nP -iTCP:4000 -sTCP:LISTEN      # shows the process id (PID)
+        kill <PID>                             # same for 3000
 
 
-PART 3 — CLOSING FOR THE DAY
-----------------------------
-1. In the Terminal running "npm run dev":  press  Ctrl + C
-2. $ npm run db:down       (stops the database — your data is KEPT)
-3. Quit Docker Desktop (whale icon in the menu bar → Quit).
+========================================================================
+FIRST-TIME SETUP (new computer, or after deleting the project)
+========================================================================
+
+  Needs Node.js 24+ (`node -v`) and Docker Desktop.
+
+        npm install             # installs everything
+        npm run setup           # creates apps/api/.env and apps/web/.env.local
+        # edit apps/api/.env: SUPER_ADMIN_PHONES (your number) and the Razorpay TEST keys
+        npm run db:up
+        npm run db:migrate
+        npm run db:seed         # default fees, super admin(s), 4 demo stalls
+        npm run env:check       # checks the API settings
+        npm run dev
+
+  Demo stalls from the seed: Dosa Corner, Chowmein Junction, Odia Thali Ghar, Chai & Rolls.
 
 
-PART 4 — USEFUL COMMANDS
-------------------------
-(run from  /Users/subhankarpatra/Developer/myWorkSpace/MOM )
+========================================================================
+USEFUL EXTRAS
+========================================================================
 
-  npm run db:up        start database + storage
-  npm run db:down      stop them (data kept)
-  npm run db:reset     ⚠ ERASE all local data, rebuild the tables and
-                       re-add the 4 demo stalls with their menus
-  npm run db:migrate   apply new database changes (after git pull)
-  npm run db:seed      add default fees, super admins, demo stalls
-                       (safe to run again — it never duplicates)
-  npm run db:psql      open a database prompt (type  \q  to leave)
-  npm run db:logs      watch what the database is doing (Ctrl + C to stop)
-  npm run env:check    check the API settings file is valid
-  npm run check        format + lint + typecheck + tests (must pass before a PR)
-  npm test             only the quick tests
-  npm run test:int     database tests (needs  npm run db:up  first)
+  Databases
+    npm run db:psql        open a SQL prompt on the app database (type \q to leave)
+    npm run db:logs        follow Postgres / S3 logs (Ctrl + C to stop following)
+    npm run db:seed        add the demo data again (safe to repeat)
+    npm run db:reset       ⚠ DELETES ALL LOCAL DATA, then migrates and seeds afresh
 
-  ⚠ Don't delete the mom_pg_data / mom_s3_data volumes in Docker
-    Desktop unless you want to erase all local data.
+  Checks and tests (the same as GitHub CI)
+    npm run check          format + lint + typecheck + unit tests
+    npm run test:int       API integration tests (needs `npm run db:up`)
+    npm run e2e -w @mom/web
+                           browser tests: builds the site, starts its own API (:4100) and
+                           website (:3100) against mom_test, runs Playwright, stops them.
+                           Stop `npm run dev` first if your Mac is slow.
 
+  Payments (Razorpay test mode)
+    - Keys live ONLY in apps/api/.env (git-ignored). Never commit them.
+    - UPI at checkout appears for a stall only when its settlement account is active:
+      admin → Stalls → the stall → UPI payouts → "Mark active (test mode)",
+      then the stall turns UPI on in its Settings.
+    - Turn on UPI in the Razorpay dashboard (test mode) to see UPI in the payment window.
 
-PART 4b — TRYING ONLINE PAYMENTS (Razorpay TEST mode, no real money)
--------------------------------------------------------------------
-Your test keys are already in apps/api/.env. To pay for an order:
-  1. Order from an OPEN stall, choose "Pay now by UPI", tap Place order.
-  2. The Razorpay window opens. In test mode use one of:
-       • Netbanking → any bank → on the next page click "Success"
-       • Card 4111 1111 1111 1111, any future expiry, any CVV,
-         then "Success" on the test page
-       • UPI id  success@razorpay  (only if UPI is switched on for your
-         Razorpay account: Dashboard → Account & Settings → Payment methods)
-  3. Your token number appears on the order page.
-
-Optional — Razorpay calling your Mac directly (the "webhook", which
-confirms payments even if the browser is closed):
-    $ npx cloudflared tunnel --url http://localhost:4000
-  It prints an https://….trycloudflare.com address. In the Razorpay
-  dashboard (Test Mode) → Settings → Webhooks → Add:
-    URL:    https://….trycloudflare.com/v1/webhooks/razorpay
-    Secret: the RAZORPAY_WEBHOOK_SECRET value from apps/api/.env
-    Events: payment.captured, order.paid, payment.failed
+  Git workflow used so far
+    one branch per issue → push → pull request → CI must pass → squash-merge into main
 
 
-PART 5 — COMMON PROBLEMS
-------------------------
-"Cannot connect to the Docker daemon" / db:up fails
-    → Docker Desktop isn't running. Open it, wait, try again.
+========================================================================
+TROUBLESHOOTING
+========================================================================
 
-"port is already allocated" / "address already in use" on db:up
-    → Something else uses port 5432 or 8333. Create a file named  .env
-      in the MOM folder (copy .env.example) and change POSTGRES_PORT
-      or S3_PORT — then also change the port in apps/api/.env .
-
-"Invalid environment configuration" when running env:check or dev
-    → It lists which setting in apps/api/.env is wrong. To start over:
-      delete apps/api/.env and run  npm run setup .
-
-Anything else → copy the red error text and ask Claude. 🙂
-
-
-CHEAT SHEET
------------
-  START:   open Docker Desktop → npm run db:up → npm run dev
-  STOP:    Ctrl + C → npm run db:down → quit Docker Desktop
-=====================================================================
+  "Cannot connect to the Docker daemon"   Docker Desktop isn't running: open it, wait, retry.
+  API exits with "invalid environment"    run `npm run env:check`; it says which setting is wrong.
+  "relation ... does not exist" / column  run `npm run db:migrate`.
+  Photos don't upload or show             `npm run db:up` (the S3 container must be running).
+  Login code never arrives                look in the `npm run dev` terminal (console SMS mode).
+  "Too many codes requested"              wait an hour, or use another number
+                                          (limits: 5 codes per number, 30 per network, per hour).

@@ -2,7 +2,7 @@ import { normalizeIndianMobile } from '@mom/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { badRequest } from '../../lib/errors.js';
-import { requireRole } from '../../plugins/authz.js';
+import { requireSuperAdmin } from '../../plugins/authz.js';
 import { listStallMembers, registerStallMember, setUserSuspended } from '../access/access.service.js';
 
 const phoneField = z.string().transform((v, ctx) => {
@@ -17,7 +17,7 @@ const phoneField = z.string().transform((v, ctx) => {
 /** /v1/admin/... — super admin only. Every change is written to the audit log. */
 export const adminAccessRoutes: FastifyPluginAsyncZod = async (app) => {
   app.addHook('preHandler', app.requireAuth);
-  app.addHook('preHandler', requireRole('super_admin'));
+  app.addHook('preHandler', requireSuperAdmin(app.db));
 
   const actor = (req: {
     auth: { userId: string } | null;

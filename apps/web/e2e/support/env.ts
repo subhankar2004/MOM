@@ -73,6 +73,11 @@ export const PHONES = {
   financeVendorDesktop: phone(71),
   financeStudent360: phone(72),
   financeStudentDesktop: phone(73),
+  // settlements tests: a stall owner and a student
+  settleVendor360: phone(74),
+  settleVendorDesktop: phone(75),
+  settleStudent360: phone(76),
+  settleStudentDesktop: phone(77),
 } as const;
 
 export const STORAGE = {

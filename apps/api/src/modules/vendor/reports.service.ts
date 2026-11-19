@@ -38,9 +38,9 @@ export interface StallReport {
   dues: { owedPaise: number; settledPaise: number; outstandingPaise: number };
   /**
    * UPI: Razorpay pays the stall the subtotal (MOM keeps the platform fee). Transfers are tracked
-   * from #26; until then `transfersReceivedPaise` is null.
+   * by Route: `transfersReceivedPaise` = transfers released to the stall in the period (#26).
    */
-  payouts: { upiDuePaise: number; transfersReceivedPaise: number | null };
+  payouts: { upiDuePaise: number; transfersReceivedPaise: number };
   daily: DayRow[];
 }
 
@@ -81,7 +81,7 @@ const istDay = (column: string) => sql.raw(`(${column} at time zone 'Asia/Kolkat
 export async function stallReport(db: Db, stallId: string, period: Period): Promise<StallReport> {
   const { start, end, days } = periodBounds(period);
 
-  const [orderTotals, ledgerTotals, outstanding, orderDays, ledgerDays] = await Promise.all([
+  const [orderTotals, ledgerTotals, outstanding, orderDays, ledgerDays, released] = await Promise.all([
     db.execute(sql`
       select
         count(*) filter (where status = 'collected')::int as collected,
@@ -129,6 +129,10 @@ export async function stallReport(db: Db, stallId: string, period: Period): Prom
       where l.stall_id = ${stallId} and l.entry_type <> 'settlement'
         and l.created_at >= ${start} and l.created_at < ${end}
       group by 1`),
+    db.execute(sql`
+      select coalesce(sum(amount_paise), 0)::bigint as released
+      from transfers where stall_id = ${stallId} and status = 'released'
+        and released_at >= ${start} and released_at < ${end}`),
   ]);
 
   const o = orderTotals.rows[0] as Record<string, unknown>;
@@ -167,7 +171,10 @@ export async function stallReport(db: Db, stallId: string, period: Period): Prom
       settledPaise: n(l.settled),
       outstandingPaise: n((outstanding.rows[0] as { outstanding: unknown }).outstanding),
     },
-    payouts: { upiDuePaise: n(o.upi_gross), transfersReceivedPaise: null },
+    payouts: {
+      upiDuePaise: n(o.upi_gross),
+      transfersReceivedPaise: n((released.rows[0] as { released: unknown }).released),
+    },
     daily: daysOf(period, days).map((day) => {
       const r = byDay.get(day);
       return {

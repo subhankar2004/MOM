@@ -15,6 +15,7 @@ import { TextField } from '@/components/ui/text-field';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api-client';
 import { useAdminOrder, useOrderAction, type AdminOrderDetail } from '@/lib/admin-console';
+import { useRetryTransfer } from '@/lib/admin-settlements';
 import { formatDateTime } from '@/lib/time';
 
 const errorText = (err: unknown) =>
@@ -176,6 +177,7 @@ function Detail({ data }: { data: AdminOrderDetail }) {
               </li>
             ))}
           </ol>
+          {data.payout && <Payout orderId={order.id} payout={data.payout} />}
           {(data.payments.length > 0 || data.refunds.length > 0) && (
             <div className="flex flex-col gap-1 border-t border-border pt-3 text-sm">
               <h3 className="font-semibold">Razorpay</h3>
@@ -276,5 +278,50 @@ function ReasonSheet({
         </Button>
       </form>
     </Sheet>
+  );
+}
+
+const PAYOUT: Record<NonNullable<AdminOrderDetail['payout']>['status'], string> = {
+  created: 'Not sent to Razorpay yet',
+  on_hold: 'Held until the student collects',
+  released: 'Paid out to the stall',
+  reversed: 'Taken back (refunded)',
+  failed: 'Failed',
+};
+
+/** The stall's share of a UPI order, paid through Razorpay Route (spec §4.2). */
+function Payout({ orderId, payout }: { orderId: string; payout: NonNullable<AdminOrderDetail['payout']> }) {
+  const retry = useRetryTransfer(orderId);
+  const toast = useToast();
+  const stuck = payout.status === 'failed' || (payout.status === 'created' && payout.lastError);
+  return (
+    <div className="flex flex-col gap-1 border-t border-border pt-3 text-sm">
+      <h3 className="font-semibold">Stall payout</h3>
+      <p className="tabular">
+        {formatINR(payout.amountPaise)} · {PAYOUT[payout.status]}
+        {payout.providerTransferId && ` · ${payout.providerTransferId}`}
+      </p>
+      {payout.lastError && <p className="text-danger">Last error: {payout.lastError}</p>}
+      {stuck && (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="self-start"
+          loading={retry.isPending}
+          onClick={() =>
+            retry.mutate(undefined, {
+              onSuccess: (r) =>
+                toast(
+                  `Payout: ${PAYOUT[r.transfer.status as keyof typeof PAYOUT] ?? r.transfer.status}`,
+                  r.transfer.lastError ? 'error' : 'success',
+                ),
+              onError: (err) => toast(errorText(err), 'error'),
+            })
+          }
+        >
+          Retry payout
+        </Button>
+      )}
+    </div>
   );
 }

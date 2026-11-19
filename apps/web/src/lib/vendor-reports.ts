@@ -15,7 +15,7 @@ export interface StallReport {
     netPaise: number;
   };
   dues: { owedPaise: number; settledPaise: number; outstandingPaise: number };
-  payouts: { upiDuePaise: number; transfersReceivedPaise: number | null };
+  payouts: { upiDuePaise: number; transfersReceivedPaise: number };
   daily: Array<{
     day: string;
     orders: number;

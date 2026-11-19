@@ -9,7 +9,8 @@ export type IssueKind =
   | 'payment_not_reflected'
   | 'cash_state'
   | 'ledger_wrong_stall'
-  | 'refund_stuck';
+  | 'refund_stuck'
+  | 'transfer_failed';
 
 export interface ReconciliationIssue {
   kind: IssueKind;
@@ -63,46 +64,59 @@ export async function reconcile(
   ) => rows.forEach((r) => issues.push(make(r)));
   const inWindow = sql`o.created_at >= ${periodStart} and o.created_at < ${periodEnd}`;
 
-  const [counted, ledger, missingPayment, wrongAmount, notReflected, cashState, wrongStall, stuck] =
-    await Promise.all([
-      db.execute(sql`select count(*)::int as n from orders o where ${inWindow}`),
-      // 1. Ledger (fees, minus reversals) must equal what the order says MOM earned.
-      db.execute(sql`
+  const [
+    counted,
+    ledger,
+    missingPayment,
+    wrongAmount,
+    notReflected,
+    cashState,
+    wrongStall,
+    stuck,
+    failedTransfers,
+  ] = await Promise.all([
+    db.execute(sql`select count(*)::int as n from orders o where ${inWindow}`),
+    // 1. Ledger (fees, minus reversals) must equal what the order says MOM earned.
+    db.execute(sql`
         select o.id, (${EXPECTED})::int as expected,
           coalesce((select sum(case when l.direction = 'credit' then l.amount_paise else -l.amount_paise end)
                     from ledger_entries l
                     where l.order_id = o.id and l.entry_type in ('platform_fee', 'cash_fee', 'refund_reversal')), 0)::int as actual
         from orders o where ${inWindow}`),
-      // 2. A confirmed UPI order must have a captured Razorpay payment...
-      db.execute(sql`
+    // 2. A confirmed UPI order must have a captured Razorpay payment...
+    db.execute(sql`
         select o.id from orders o
         where ${inWindow} and o.payment_method = 'upi' and o.placed_at is not null
           and not exists (select 1 from payments p where p.order_id = o.id and p.status = 'captured')`),
-      // 3. ...for exactly the order total.
-      db.execute(sql`
+    // 3. ...for exactly the order total.
+    db.execute(sql`
         select o.id, o.total_paise as expected, p.amount_paise as actual from orders o
         join payments p on p.order_id = o.id and p.status = 'captured'
         where ${inWindow} and p.amount_paise <> o.total_paise`),
-      // 4. Money Razorpay captured must show on the order (paid, or being refunded).
-      db.execute(sql`
+    // 4. Money Razorpay captured must show on the order (paid, or being refunded).
+    db.execute(sql`
         select o.id, o.payment_status from orders o
         join payments p on p.order_id = o.id and p.status = 'captured'
         where ${inWindow} and o.payment_status not in ('paid', 'refund_pending', 'refunded')`),
-      // 5. Cash is only received at hand-over.
-      db.execute(sql`
+    // 5. Cash is only received at hand-over.
+    db.execute(sql`
         select o.id, o.status from orders o
         where ${inWindow} and o.payment_status = 'paid_cash' and o.status <> 'collected'`),
-      // 6. Each ledger row belongs to its order's stall (stall statements depend on it).
-      db.execute(sql`
+    // 6. Each ledger row belongs to its order's stall (stall statements depend on it).
+    db.execute(sql`
         select distinct o.id from orders o join ledger_entries l on l.order_id = o.id
         where ${inWindow} and l.stall_id <> o.stall_id`),
-      // 7. A refund that couldn't start a day ago needs an admin (retry in the orders explorer).
-      db.execute(sql`
+    // 7. A refund that couldn't start a day ago needs an admin (retry in the orders explorer).
+    db.execute(sql`
         select o.id from orders o
         where ${inWindow} and o.payment_status = 'refund_pending'
           and not exists (select 1 from refunds r where r.order_id = o.id)
           and o.updated_at < ${new Date(input.now.getTime() - MS_PER_DAY)}`),
-    ]);
+    // 8. A stall's UPI payout (Route transfer) that Razorpay refused or we gave up on.
+    db.execute(sql`
+        select o.id, t.last_error from orders o join transfers t on t.order_id = o.id
+        where ${inWindow} and t.status = 'failed'`),
+  ]);
 
   add(
     (ledger.rows as Array<{ id: string; expected: number; actual: number }>).filter(
@@ -154,6 +168,13 @@ export async function reconcile(
     severity: 'warning',
     orderId: String(r.id),
     message: "Refund couldn't start for over a day. Retry it from the order.",
+  }));
+
+  add(failedTransfers.rows as Array<Record<string, unknown>>, (r) => ({
+    kind: 'transfer_failed',
+    severity: 'error',
+    orderId: String(r.id),
+    message: `The stall's UPI payout failed${r.last_error ? ` (${String(r.last_error)})` : ''}. Retry it from Settlements.`,
   }));
 
   const errors = issues.filter((i) => i.severity === 'error').length;

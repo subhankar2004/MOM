@@ -72,7 +72,7 @@ try {
 async function startJobsWhenPossible(): Promise<void> {
   while (!shuttingDown) {
     try {
-      stopJobs = await startJobs(env!.DATABASE_URL, db, app.log);
+      stopJobs = await startJobs(env!.DATABASE_URL, db, app.log, app.paymentGateway);
       return;
     } catch (err) {
       app.log.error({ err }, 'background jobs could not start; retrying in 30 s');

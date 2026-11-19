@@ -158,9 +158,7 @@ function Report({ r, view }: { r: StallReport; view: ReportView }) {
             student&apos;s bill, so you get the full amount.
           </p>
           <p className="text-sm text-ink-muted">
-            {r.payouts.transfersReceivedPaise === null
-              ? 'Payout details will appear here once payouts are switched on for your stall.'
-              : `Received so far: ${formatINR(r.payouts.transfersReceivedPaise)}`}
+            {`Paid to your bank for orders collected in this period: ${formatINR(r.payouts.transfersReceivedPaise)}. Orders not yet collected are held until pickup.`}
           </p>
         </Card>
       </div>

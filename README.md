@@ -72,6 +72,17 @@ category chips that follow the scroll, dish rows (photo, veg mark, price, Add / 
 sheet, "Sold out" dishes that can't be added, and a banner when the stall is closed or paused. One
 stall per cart: adding from another stall asks first. A 50-dish menu is tested at 4× CPU slowdown.
 
+**Platform settings & audit log (#27):** `/admin/settings` edits the versioned platform settings
+(spec §4.1, A7): platform and cash fee (with the bill on ₹100 previewed live), open cash orders per
+student, cash no-show limit, minutes to pay by UPI, busy-meter thresholds, and two switches for
+every stall: **cash payments** and **pause all ordering** (enforced in the stall list, cart quote and
+order placement; stalls see a notice on their settings page). Every save is a new version, "now" or
+scheduled for later; orders keep the fees they were placed with, so a change only affects orders
+placed after it takes effect. One scheduled change at a time (so it can't later undo a newer one),
+cancellable before it starts. Every change is audited with only the fields that changed.
+`/admin/audit` is the read-only audit log: filter by who (name, phone or "system"), what, record id,
+action and dates; each entry shows the before/after of every field, the IP, and links to the record.
+
 **Settlements: Route transfers & cash dues (#26):** when a UPI payment is confirmed (verify or
 webhook), the stall's food subtotal is sent to its Razorpay linked account as a **held** Route
 transfer (MOM keeps the platform fee); hand-over **releases** it; any refund **reverses** it (before

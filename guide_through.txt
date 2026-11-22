@@ -217,8 +217,23 @@ ORDERS
   - Refund… (with a reason): money back for a finished UPI order (e.g. a complaint after
     pickup) without changing the order. Cash orders have no online payment to refund.
 
-Coming next (these pages still show "coming soon"): Platform settings and the Audit log
-(issue #27).
+SETTINGS (MOM-wide)
+  - Fees: the platform fee and the cash handling fee, with the bill on a ₹100 order shown
+    as you type. Limits: open cash orders per student, cash no-shows before cash is
+    blocked, minutes to pay by UPI. The busy meter's "not busy" / "moderately busy" limits.
+  - Switches for every stall: "Cash payments" (off: no stall takes cash) and "Pause all
+    ordering" (on: every stall shows paused, no new orders; orders already placed carry on).
+    Stall owners see a note on their Settings page while either is in force.
+  - "Now" or "Later": e.g. new fees from Monday 6 AM (India time). Orders already placed
+    keep their fees. Only one change can wait at a time; "Cancel change" removes it.
+
+AUDIT LOG
+  - Every change by admins, stall owners and the system: who, what, when, from which
+    internet address, and the before/after of each field ("Before and after"). Filter by
+    who (name, phone, or "system"), what, a record id, the action and dates. Entries can't
+    be edited or deleted.
+
+Every page of the admin console is now in place.
 
 
 ------------------------------------------------------------------------

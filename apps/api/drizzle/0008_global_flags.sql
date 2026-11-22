@@ -1,0 +1,2 @@
+ALTER TABLE "platform_settings" ADD COLUMN "cash_enabled_globally" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "platform_settings" ADD COLUMN "ordering_paused" boolean DEFAULT false NOT NULL;

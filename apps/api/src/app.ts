@@ -10,6 +10,7 @@ import { AuthService } from './modules/auth/auth.service.js';
 import { adminAccessRoutes } from './modules/admin/members.routes.js';
 import { adminFinanceRoutes } from './modules/admin/finance.routes.js';
 import { adminOrdersRoutes } from './modules/admin/orders-admin.routes.js';
+import { adminPlatformRoutes } from './modules/admin/platform.routes.js';
 import { adminSettlementsRoutes } from './modules/admin/settlements.routes.js';
 import { RevenueService } from './modules/admin/revenue.service.js';
 import { OrdersAdminService } from './modules/admin/orders-admin.service.js';
@@ -263,6 +264,12 @@ export async function buildApp({
         revenue: new RevenueService(db, stallsService),
       });
       await v1.register(adminSettlementsRoutes, { prefix: '/admin', now, gateway });
+      await v1.register(adminPlatformRoutes, {
+        prefix: '/admin',
+        now,
+        // The public stall list caches settings-dependent answers (cash on/off, paused).
+        onSettingsChange: () => stallsService.invalidate(),
+      });
     },
     { prefix: '/v1' },
   );

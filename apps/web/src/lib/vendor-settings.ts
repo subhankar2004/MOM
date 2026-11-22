@@ -30,6 +30,8 @@ export interface StallSettings {
     payments: { upi: boolean; cash: boolean };
   };
   hours: HoursSlot[];
+  /** MOM's switches for every stall. */
+  platform: { cashEnabled: boolean; orderingPaused: boolean };
   availability: PublicStall['availability'];
 }
 

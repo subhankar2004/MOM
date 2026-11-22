@@ -87,16 +87,19 @@ export async function quoteCart(db: Db, req: QuoteRequest, now: Date, cfg: { upi
   const subtotalPaise = orderable.reduce((sum, l) => sum + l.lineTotalPaise, 0);
   const rates = { platformFeeBps: settings.platformFeeBps, cashFeeBps: settings.cashFeeBps };
   const upiAccepted = cfg.upiOnline && stall.upiEnabled && stall.routeStatus === 'activated';
+  // MOM can switch cash off for every stall at once (spec A7).
+  const cashAccepted = stall.cashEnabled && settings.cashEnabledGlobally;
   const options: { upi: FeeBreakdown | null; cash: FeeBreakdown | null } = {
     upi: upiAccepted && subtotalPaise > 0 ? calcFees(subtotalPaise, 'upi', rates) : null,
-    cash: stall.cashEnabled && subtotalPaise > 0 ? calcFees(subtotalPaise, 'cash', rates) : null,
+    cash: cashAccepted && subtotalPaise > 0 ? calcFees(subtotalPaise, 'cash', rates) : null,
   };
 
   const state = availability(
     {
       status: stall.status,
       isOpenOverride: stall.isOpenOverride,
-      acceptingOrders: stall.acceptingOrders,
+      // A platform-wide pause (spec A7) makes every stall "paused".
+      acceptingOrders: stall.acceptingOrders && !settings.orderingPaused,
       hours,
     },
     now,
@@ -105,7 +108,7 @@ export async function quoteCart(db: Db, req: QuoteRequest, now: Date, cfg: { upi
   if (orderable.length === 0) problems.push('empty');
   if (state === 'closed') problems.push('stall_closed');
   if (state === 'paused') problems.push('stall_paused');
-  if (!upiAccepted && !stall.cashEnabled) problems.push('no_payment_method');
+  if (!upiAccepted && !cashAccepted) problems.push('no_payment_method');
   if (lines.some((l) => l.status !== 'ok')) problems.push('items_need_attention');
 
   return {

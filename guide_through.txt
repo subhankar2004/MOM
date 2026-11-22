@@ -16,14 +16,22 @@ The app works in any phone or laptop browser; on a phone you can "Add to Home Sc
 1. SIGNING IN
 ------------------------------------------------------------------------
 
-  1. Open the app and tap "Sign in" (or open any page that needs you to be signed in).
+  There's one sign-in page for each kind of account:
+    - Students:                  /login           (anyone; new numbers sign up here)
+    - Stall owners and staff:    /vendor/login    (only numbers MOM registered to a stall)
+    - The MOM team:              /admin/login     (super admins only)
+  Each page only lets in its own kind of account. Opening a stall or admin page while
+  signed out takes you to the right sign-in page by itself.
+
+  1. Open the right sign-in page (or any page that needs you to be signed in).
   2. Type your 10-digit mobile number and tap "Send code".
   3. Type the 6-digit code from the SMS. (You can ask for a new code after 30 seconds.)
   4. First time only: type your name and tap "Continue".
 
 You stay signed in on that device. "Sign out" is in the top bar.
-Stall owners are added by the MOM admin first (see section 4); after that they simply
-sign in with their number and land in their stall's console.
+Stall owners are added by the MOM admin first (see section 4); after that they sign in
+on the stall sign-in page (/vendor/login) and land in their stall's console. A number
+that isn't registered to a stall is refused there (sign in as a student at /login instead).
 
 
 ------------------------------------------------------------------------
@@ -135,7 +143,7 @@ SALES (owners)
 ------------------------------------------------------------------------
 
 Your number is made a super admin by the MOM team (it's listed in the server settings).
-After signing in you land in the admin console.
+Sign in at /admin/login; you land in the admin console.
 
 OVERVIEW (the first page)
   - Today in India time: orders, what students are paying, MOM's revenue (fees earned,

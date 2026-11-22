@@ -72,6 +72,18 @@ category chips that follow the scroll, dish rows (photo, veg mark, price, Add / 
 sheet, "Sold out" dishes that can't be added, and a banner when the stall is closed or paused. One
 stall per cart: adding from another stall asks first. A 50-dish menu is tested at 4× CPU slowdown.
 
+**Separate sign-in pages:** `/login` (students; anyone, new numbers sign up), `/vendor/login`
+(stall owners and staff: only numbers registered to a stall, by membership or a pending invite) and
+`/admin/login` (super admins and SUPER_ADMIN_PHONES). `POST /v1/auth/otp/verify` takes
+`portal: student|vendor|admin`; the check runs **after** the code is right, so the pages never
+reveal to strangers which numbers are stall or admin accounts, and on the wrong page the code is
+used up, no session is issued and no account is created (`403 WRONG_PORTAL`). Each console sends
+signed-out visitors to its own page, "go back to" links stay inside the page's own area, and
+signing out returns there. Console pages live in route groups (`app/vendor/(console)`,
+`app/admin/(console)`) so the sign-in pages sit outside the signed-in layouts. **Demo accounts** for
+local testing are created by `npm run db:seed` and sign in with the fixed code from
+`SMS_TEST_PHONES`/`SMS_TEST_CODE` (refused in production); see `quick_start.txt`.
+
 **Platform settings & audit log (#27):** `/admin/settings` edits the versioned platform settings
 (spec §4.1, A7): platform and cash fee (with the bill on ₹100 previewed live), open cash orders per
 student, cash no-show limit, minutes to pay by UPI, busy-meter thresholds, and two switches for

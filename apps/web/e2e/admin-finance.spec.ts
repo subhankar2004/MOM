@@ -80,7 +80,8 @@ test('revenue: periods, chart, per-stall table and CSVs', async ({ page }) => {
   await expect(bars).toHaveCount(30);
 
   await page.getByRole('tab', { name: 'Last 12 weeks' }).click();
-  await expect(bars).toHaveCount(13); // 12 weeks of days touch 13 Monday-started weeks at most
+  // 84 days touch 12 Monday-started weeks when they start on a Monday, otherwise 13.
+  await expect.poll(async () => [12, 13].includes(await bars.count())).toBe(true);
   await page.getByRole('tab', { name: 'Last 12 months' }).click();
   await expect(bars).toHaveCount(12);
   // This test's stall earned MOM ₹7.20 (₹1.20 platform + ₹6.00 cash fee) today.

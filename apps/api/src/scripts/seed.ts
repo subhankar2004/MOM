@@ -27,7 +27,8 @@ try {
   super admins: ${r.superAdmins || 'none (set SUPER_ADMIN_PHONES in apps/api/.env)'}
   demo stalls:  ${r.stallsCreated.length ? `created ${r.stallsCreated.join(', ')}` : 'none created'}${
     r.stallsSkipped.length ? `\n                (already existed: ${r.stallsSkipped.join(', ')})` : ''
-  }`);
+  }
+  demo accounts: ${r.demoAccounts ? `${r.demoAccounts} created` : 'already present'} (see quick_start.txt)`);
 } finally {
   await pool.end();
 }

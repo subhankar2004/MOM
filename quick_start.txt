@@ -69,10 +69,79 @@ START EVERYTHING (every day)
      Wait for "[api] ... Server listening at http://127.0.0.1:4000" and "[web] ✓ Ready",
      then open http://localhost:3000
 
-  Signing in locally: SMS_PROVIDER=console, so no SMS is sent. The 6-digit code is
-  PRINTED IN THE TERMINAL running `npm run dev`, in a line starting with
-  "📱 SMS (not really sent):".
-  Your admin number is the one in SUPER_ADMIN_PHONES in apps/api/.env.
+  Signing in locally: no real SMS is sent (SMS_PROVIDER=console). The demo accounts
+  below always use the code 123456. Any other number gets a code PRINTED IN THE
+  TERMINAL running `npm run dev`, in a line starting with "📱 SMS (not really sent):".
+  Your own admin number is the one in SUPER_ADMIN_PHONES in apps/api/.env.
+
+
+========================================================================
+SIGN-IN LINKS (one per kind of account)
+========================================================================
+
+  Students ........... http://localhost:3000/login
+                       Anyone can sign in; a new number becomes a new student account.
+  Stall console ...... http://localhost:3000/vendor/login
+                       Only numbers MOM registered to a stall (owners and counter staff).
+  MOM admin .......... http://localhost:3000/admin/login
+                       Only super admins.
+
+  Each page only lets in its own kind of account. On the wrong page you can still enter
+  the code, but you're told the number isn't allowed there and no session or account is
+  made. Signing out takes you back to that area's own sign-in page.
+
+
+========================================================================
+DEMO ACCOUNTS (local only)        sign-in code for all of them: 123456
+========================================================================
+
+  Who                         Mobile number    Sign in at
+  --------------------------  ---------------  ---------------------
+  Demo Student                70000 00001      /login
+  Second Student              70000 00002      /login
+  (new student, not created)  70000 00009      /login  → try signing up
+  Dosa Corner owner           70000 00011      /vendor/login
+  Dosa Corner counter staff   70000 00012      /vendor/login  (orders + scan only)
+  Chowmein Junction owner     70000 00013      /vendor/login
+  Demo Admin                  70000 00021      /admin/login
+
+  How it's set up:
+    - The accounts are created by `npm run db:seed` (safe to run again).
+    - The fixed code comes from SMS_TEST_PHONES and SMS_TEST_CODE in apps/api/.env.
+      The server refuses those settings in production, so the demo can never leak live.
+    - Fresh database? Run `npm run db:seed` and the accounts are back.
+
+
+========================================================================
+TRY THE WHOLE FLOW BY HAND (about 15 minutes)
+========================================================================
+
+  Use two browser windows (or a normal + a private window), one for each person.
+
+   1. Admin (window A): /admin/login, 70000 00021, code 123456.
+      - Overview: today's numbers. Stalls: Dosa Corner and Chowmein Junction are live.
+      - Dosa Corner → UPI payouts → "Mark active (test mode)" if it isn't active yet.
+      - Sign out (top right).
+   2. Stall owner (window A): /vendor/login, 70000 00011, code 123456.
+      - Orders: tap "Turn on order sound". Keep this window open.
+   3. Student (window B): /login, 70000 00001, code 123456.
+      - Open Dosa Corner, add 2 dishes, View cart → Continue to payment.
+      - Pay cash at the counter → Place order. You see the token, QR and pickup code.
+   4. Stall owner (window A): the order appears with a chime. Accept → Mark ready.
+      The student's screen turns green ("Ready to collect").
+   5. Stall owner: Scan → type the token and the 4-digit pickup code from window B
+      (or hold window B's QR to the camera) → "Cash received ₹X · Hand over".
+   6. Try UPI: as the student, order again and choose UPI. Razorpay's test window
+      opens: choose Netbanking → any bank → "Success" (or card 4111 1111 1111 1111,
+      any future date, any CVV). The order is paid; repeat steps 4–5 ("Hand over").
+   7. Stall owner: Menu (add a dish with a photo, mark one sold out), Settings (hours,
+      pause orders), Sales (today's numbers, the CSV).
+   8. Counter staff: /vendor/login, 70000 00012: only Orders and Scan work; Menu,
+      Settings and Sales say only the owner can use them.
+   9. Admin again: Orders (find the order, see its timeline), Revenue, Settlements
+      (Dosa Corner owes its cash fees → "Record cash received" → statement ₹0.00),
+      Users & access, Settings (fees, switches), Audit log (every step you did).
+  10. Wrong page check: try 70000 00001 (a student) on /vendor/login: it's refused.
 
 
 ========================================================================

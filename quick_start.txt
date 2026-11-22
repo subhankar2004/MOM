@@ -131,9 +131,8 @@ TRY THE WHOLE FLOW BY HAND (about 15 minutes)
       The student's screen turns green ("Ready to collect").
    5. Stall owner: Scan → type the token and the 4-digit pickup code from window B
       (or hold window B's QR to the camera) → "Cash received ₹X · Hand over".
-   6. Try UPI: as the student, order again and choose UPI. Razorpay's test window
-      opens: choose Netbanking → any bank → "Success" (or card 4111 1111 1111 1111,
-      any future date, any CVV). The order is paid; repeat steps 4–5 ("Hand over").
+   6. Try UPI: as the student, order again and choose UPI → Pay. In test payment mode
+      (below) it's paid at once, no Razorpay window. Repeat steps 4–5 ("Hand over").
    7. Stall owner: Menu (add a dish with a photo, mark one sold out), Settings (hours,
       pause orders), Sales (today's numbers, the CSV).
    8. Counter staff: /vendor/login, 70000 00012: only Orders and Scan work; Menu,
@@ -197,6 +196,14 @@ USEFUL EXTRAS
                            browser tests: builds the site, starts its own API (:4100) and
                            website (:3100) against mom_test, runs Playwright, stops them.
                            Stop `npm run dev` first if your Mac is slow.
+
+  Test payment mode (how it's set up now)
+    - apps/api/.env has PAYMENTS_PROVIDER=test: tapping "Pay" on a UPI order completes the
+      payment at once. No Razorpay window opens and no money moves. Refunds also complete
+      at once. The server refuses this setting on staging and production.
+    - To use Razorpay's test checkout again: delete the PAYMENTS_PROVIDER=test line from
+      apps/api/.env (the Razorpay keys are still there) and restart `npm run dev`. Then pay
+      with Netbanking → any bank → "Success", or card 4111 1111 1111 1111.
 
   Payments (Razorpay test mode)
     - Keys live ONLY in apps/api/.env (git-ignored). Never commit them.

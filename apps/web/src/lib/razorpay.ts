@@ -56,6 +56,8 @@ interface StartResponse {
   currency: 'INR';
   orderId: string;
   prefill: { contact?: string; name?: string };
+  /** Server in test payment mode (PAYMENTS_PROVIDER=test): no Razorpay window, paid at once. */
+  testMode: boolean;
 }
 
 /**
@@ -92,13 +94,18 @@ export function usePayOrder(order: Pick<Order, 'id' | 'stall'>) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const [start] = await Promise.all([
-        apiRequest<StartResponse>('/v1/payments/razorpay/order', {
+      const start = await apiRequest<StartResponse>('/v1/payments/razorpay/order', {
+        method: 'POST',
+        body: { orderId: order.id },
+      });
+      // Local testing without Razorpay: the server marks it paid straight away.
+      if (start.testMode) {
+        return apiRequest<{ order: Order }>('/v1/payments/test/complete', {
           method: 'POST',
-          body: { orderId: order.id },
-        }),
-        loadRazorpay(),
-      ]);
+          body: { orderId: order.id, razorpayOrderId: start.razorpayOrderId },
+        });
+      }
+      await loadRazorpay();
       const result = await openCheckout(start, order.stall.name);
       return apiRequest<{ order: Order }>('/v1/payments/razorpay/verify', {
         method: 'POST',

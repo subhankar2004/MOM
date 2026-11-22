@@ -209,6 +209,7 @@ export async function buildApp({
           keySecret: env.RAZORPAY_KEY_SECRET,
           qrSecret: env.QR_SECRET,
           now,
+          instantTestPayments: env.PAYMENTS_PROVIDER === 'test',
         });
         if (env.RAZORPAY_WEBHOOK_SECRET) {
           await v1.register(razorpayWebhookRoutes, {

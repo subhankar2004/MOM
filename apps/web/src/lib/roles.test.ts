@@ -42,6 +42,8 @@ describe('safeNextPath (open-redirect protection)', () => {
     'javascript:alert(1)',
     '/login',
     '/login?next=/admin',
+    '/vendor/login',
+    '/admin/login?next=/admin',
     '/orders\n',
     '/a\u0000b',
   ])('refuses %j', (path) => {

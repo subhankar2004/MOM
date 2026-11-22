@@ -1,8 +1,16 @@
 import { paise } from '@mom/shared';
 import { count, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
-import { menuCategories, menuItems, platformSettings, stallHours, stalls, users } from '../schema/index.js';
-import { DEFAULT_SETTINGS, DEMO_STALLS } from './demo-data.js';
+import {
+  menuCategories,
+  menuItems,
+  platformSettings,
+  stallHours,
+  stallMembers,
+  stalls,
+  users,
+} from '../schema/index.js';
+import { DEFAULT_SETTINGS, DEMO_ACCOUNTS, DEMO_STALLS } from './demo-data.js';
 
 export interface SeedOptions {
   /** E.164 phones that become super admins. */
@@ -16,6 +24,7 @@ export interface SeedResult {
   superAdmins: number;
   stallsCreated: string[];
   stallsSkipped: string[];
+  demoAccounts: number;
 }
 
 /**
@@ -29,6 +38,7 @@ export async function seed(db: Db, options: SeedOptions): Promise<SeedResult> {
       superAdmins: 0,
       stallsCreated: [],
       stallsSkipped: [],
+      demoAccounts: 0,
     };
 
     const [settingsCount] = await tx.select({ n: count() }).from(platformSettings);
@@ -101,6 +111,35 @@ export async function seed(db: Db, options: SeedOptions): Promise<SeedResult> {
         );
       }
       result.stallsCreated.push(demo.slug);
+    }
+
+    // Demo accounts (named, so there's no name step) and their stall memberships.
+    for (const account of DEMO_ACCOUNTS) {
+      const [existing] = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(sql`${users.phone} = ${account.phone}`);
+      const id =
+        existing?.id ??
+        (
+          await tx
+            .insert(users)
+            .values({ phone: account.phone, name: account.name, role: account.role })
+            .returning({ id: users.id })
+        )[0]!.id;
+      if (!existing) result.demoAccounts++;
+      if (account.stall) {
+        const [stall] = await tx
+          .select({ id: stalls.id })
+          .from(stalls)
+          .where(sql`${stalls.slug} = ${account.stall.slug}`);
+        if (stall) {
+          await tx
+            .insert(stallMembers)
+            .values({ stallId: stall.id, userId: id, role: account.stall.role })
+            .onConflictDoNothing();
+        }
+      }
     }
 
     return result;

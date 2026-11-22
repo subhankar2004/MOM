@@ -31,6 +31,12 @@ export function homeFor(role: Role): Route {
  */
 export function safeNextPath(next: string | null | undefined): Route | null {
   if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) return null;
-  if ([...next].some((ch) => ch.charCodeAt(0) < 32) || next.startsWith('/login')) return null;
+  if ([...next].some((ch) => ch.charCodeAt(0) < 32) || isLoginPage(next)) return null;
   return next as Route;
+}
+
+/** The three sign-in pages (never a "go back to" target: that would loop). */
+function isLoginPage(path: string): boolean {
+  const p = path.split(/[?#]/)[0]!;
+  return p === '/login' || p === '/vendor/login' || p === '/admin/login' || p.startsWith('/login/');
 }

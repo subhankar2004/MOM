@@ -102,9 +102,10 @@ test.describe('signing in', () => {
     await expect(page.getByRole('textbox', { name: 'Name' })).toHaveValue('Refresh Test');
     expect((await context.cookies()).some((c) => c.name === 'mom_at')).toBe(true); // renewed
   });
-  test('an existing admin signing in lands on /admin', async ({ page }) => {
+  test('an existing admin signing in on the admin page lands on /admin', async ({ page }) => {
     await createUser(PHONES.flowAdmin, 'Second Admin', 'super_admin');
-    await page.goto('/login');
+    await page.goto('/admin/login');
+    await expect(page.getByRole('heading', { name: 'MOM admin' })).toBeVisible();
     await enterPhone(page, PHONES.flowAdmin);
     await typeCode(page, TEST_CODE); // named already → no name step
     await expect(page).toHaveURL(/\/admin$/);

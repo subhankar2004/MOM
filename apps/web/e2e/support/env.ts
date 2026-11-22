@@ -78,6 +78,9 @@ export const PHONES = {
   settleVendorDesktop: phone(75),
   settleStudent360: phone(76),
   settleStudentDesktop: phone(77),
+  // sign-in pages test: a student and a stall owner
+  portalStudent: phone(78),
+  portalOwner: phone(79),
 } as const;
 
 export const STORAGE = {

@@ -77,7 +77,7 @@ export function useSetSessionUser() {
  * (rather than client navigation) guarantees nothing from this user stays in memory,
  * and avoids guards racing to redirect to /login while the session is cleared.
  */
-export function useSignOut(redirectTo: '/' | '/login' = '/') {
+export function useSignOut(redirectTo: '/' | '/login' | '/vendor/login' | '/admin/login' = '/') {
   return useMutation({
     mutationFn: () => apiRequest<null>('/v1/auth/logout', { method: 'POST' }),
     // Signed out locally even if the network call failed (cookies are httpOnly; the server

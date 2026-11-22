@@ -11,7 +11,8 @@ import { useSession } from '@/lib/session';
 
 /**
  * Shows its children only to signed-in users allowed in `area`:
- * signed out → /login?next=<this page>; wrong role → /no-access.
+ * signed out → that area's sign-in page (/login, /vendor/login or /admin/login) with ?next=<this
+ * page>; wrong role → /no-access.
  * UX only — the API enforces the same rules on every request.
  */
 export function RequireRole({ area, children }: { area: Area; children: ReactNode }) {
@@ -22,11 +23,12 @@ export function RequireRole({ area, children }: { area: Area; children: ReactNod
 
   useEffect(() => {
     if (status === 'signed-out') {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}` as Route);
+      const login = area === 'vendor' ? '/vendor/login' : area === 'admin' ? '/admin/login' : '/login';
+      router.replace(`${login}?next=${encodeURIComponent(pathname)}` as Route);
     } else if (status === 'signed-in' && !allowed) {
       router.replace(`/no-access?from=${encodeURIComponent(pathname)}` as Route);
     }
-  }, [status, allowed, pathname, router]);
+  }, [status, allowed, pathname, router, area]);
 
   if (status === 'error') {
     return (

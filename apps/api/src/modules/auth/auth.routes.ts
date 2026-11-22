@@ -76,12 +76,19 @@ export const authRoutes: FastifyPluginAsyncZod<AuthRoutesOptions> = async (
         body: z.object({
           phone: phoneField,
           code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code'),
+          /** Which sign-in page: student (default, anyone), vendor (stall accounts), admin. */
+          portal: z.enum(['student', 'vendor', 'admin']).default('student'),
         }),
         response: { 200: sessionResponse },
       },
     },
     async (req, reply) => {
-      const { session, isNewUser } = await auth.verifyOtp(req.body.phone, req.body.code, meta(req));
+      const { session, isNewUser } = await auth.verifyOtp(
+        req.body.phone,
+        req.body.code,
+        meta(req),
+        req.body.portal,
+      );
       setAuthCookies(reply, cookies, session);
       return {
         user: session.user,

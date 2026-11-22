@@ -10,10 +10,58 @@ import { OtpInput } from '@/components/auth/otp-input';
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/text-field';
 import { ApiError, apiRequest } from '@/lib/api-client';
-import { homeFor, safeNextPath } from '@/lib/roles';
+import type { Route } from 'next';
+import { canAccess, safeNextPath } from '@/lib/roles';
 import { useSession, useSetSessionUser, type SessionUser } from '@/lib/session';
 
 type Step = 'phone' | 'code' | 'name';
+
+/** Which sign-in page this is: students (anyone), the stall console, or the MOM admin console. */
+export type Portal = 'student' | 'vendor' | 'admin';
+
+const PORTALS: Record<
+  Portal,
+  {
+    heading: string;
+    intro: string;
+    home: Route;
+    /** "Go back to" paths allowed on this page (other areas' pages are ignored). */
+    owns: (path: string) => boolean;
+    nameHint: string;
+    other: { href: Route; label: string };
+  }
+> = {
+  student: {
+    heading: 'Sign in to order',
+    intro: "We'll text a 6-digit code to your mobile number.",
+    home: '/',
+    owns: (p) => !p.startsWith('/vendor') && !p.startsWith('/admin'),
+    nameHint: 'The stall calls this out when your food is ready.',
+    other: { href: '/vendor/login', label: 'Run a stall? Sign in to the stall console' },
+  },
+  vendor: {
+    heading: 'Stall console',
+    intro: 'For stall owners and counter staff. Use the number MOM registered for your stall.',
+    home: '/vendor',
+    owns: (p) => p.startsWith('/vendor'),
+    nameHint: 'Shown to MOM and your team next to the changes you make.',
+    other: { href: '/login', label: 'Ordering food? Sign in as a student' },
+  },
+  admin: {
+    heading: 'MOM admin',
+    intro: 'For the MOM team only.',
+    home: '/admin',
+    owns: (p) => p.startsWith('/admin'),
+    nameHint: 'Shown in the audit log next to every change you make.',
+    other: { href: '/login', label: 'Ordering food? Sign in as a student' },
+  },
+};
+
+const AREA: Record<Portal, 'student' | 'vendor' | 'admin'> = {
+  student: 'student',
+  vendor: 'vendor',
+  admin: 'admin',
+};
 
 interface VerifyResponse extends MeResponse {
   isNewUser: boolean;
@@ -43,10 +91,13 @@ function useSecondsLeft(until: number | null): number {
   return until ? Math.max(0, Math.ceil((until - now) / 1000)) : 0;
 }
 
-export function LoginFlow() {
+export function LoginFlow({ portal = 'student' }: { portal?: Portal }) {
+  const page = PORTALS[portal];
   const router = useRouter();
   const params = useSearchParams();
-  const next = safeNextPath(params.get('next'));
+  const asked = safeNextPath(params.get('next'));
+  // Each page only sends people back into its own area.
+  const next = asked && page.owns(asked) ? asked : null;
   const session = useSession();
   const setSessionUser = useSetSessionUser();
 
@@ -59,12 +110,14 @@ export function LoginFlow() {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const errorId = useId();
 
-  const goHome = (user: SessionUser) => router.replace(next ?? homeFor(user.role));
+  const goHome = (_user: SessionUser) => router.replace(next ?? page.home);
 
-  // Already signed in (and named)? Skip the form.
+  // Already signed in (and named) with an account for this page? Skip the form.
   useEffect(() => {
-    if (step === 'phone' && session.user?.name) router.replace(next ?? homeFor(session.user.role));
-  }, [session.user, step, next, router]);
+    if (step === 'phone' && session.user?.name && canAccess(AREA[portal], session.user.role)) {
+      router.replace(next ?? page.home);
+    }
+  }, [session.user, step, next, router, portal, page.home]);
 
   // Move focus to each step's heading so screen readers announce the change.
   useEffect(() => {
@@ -93,7 +146,10 @@ export function LoginFlow() {
 
   const verify = useMutation({
     mutationFn: (otp: string) =>
-      apiRequest<VerifyResponse>('/v1/auth/otp/verify', { method: 'POST', body: { phone, code: otp } }),
+      apiRequest<VerifyResponse>('/v1/auth/otp/verify', {
+        method: 'POST',
+        body: { phone, code: otp, portal },
+      }),
     onSuccess: ({ user, isNewUser }) => {
       setSessionUser(user);
       if (isNewUser) setStep('name');
@@ -121,9 +177,9 @@ export function LoginFlow() {
       <form onSubmit={submitPhone} className="flex flex-col gap-6" noValidate>
         <div className="flex flex-col gap-2">
           <h1 ref={headingRef} tabIndex={-1} className="font-display text-3xl font-black outline-none">
-            Sign in to order
+            {page.heading}
           </h1>
-          <p className="text-ink-muted">We&apos;ll text a 6-digit code to your mobile number.</p>
+          <p className="text-ink-muted">{page.intro}</p>
         </div>
         <TextField
           label="Mobile number"
@@ -148,11 +204,19 @@ export function LoginFlow() {
         >
           {secondsLeft > 0 ? `Send code in ${secondsLeft}s` : 'Send code'}
         </Button>
+        {portal === 'student' && (
+          <Link
+            href="/"
+            className="text-center font-semibold text-ink-muted underline-offset-4 hover:underline"
+          >
+            Browse stalls without signing in
+          </Link>
+        )}
         <Link
-          href="/"
-          className="text-center font-semibold text-ink-muted underline-offset-4 hover:underline"
+          href={page.other.href}
+          className="text-center text-sm font-semibold text-ink-muted underline-offset-4 hover:underline"
         >
-          Browse stalls without signing in
+          {page.other.label}
         </Link>
       </form>
     );
@@ -167,6 +231,7 @@ export function LoginFlow() {
     const codeDead =
       verify.error instanceof ApiError &&
       ['OTP_EXPIRED', 'OTP_TOO_MANY_ATTEMPTS'].includes(verify.error.code);
+    const wrongPage = verify.error instanceof ApiError && verify.error.code === 'WRONG_PORTAL';
     return (
       <div className="flex flex-col gap-6">
         <button
@@ -217,8 +282,16 @@ export function LoginFlow() {
             Sign in
           </Button>
         </form>
+        {wrongPage && (
+          <Link
+            href={page.other.href}
+            className="text-center font-semibold underline-offset-4 hover:underline"
+          >
+            {page.other.label}
+          </Link>
+        )}
         <div className="text-center text-sm">
-          {secondsLeft > 0 ? (
+          {wrongPage ? null : secondsLeft > 0 ? (
             <span className="text-ink-muted" aria-live="off">
               Didn&apos;t get it? You can ask for a new code in{' '}
               <span className="tabular">{secondsLeft}s</span>
@@ -255,7 +328,7 @@ export function LoginFlow() {
         <h1 ref={headingRef} tabIndex={-1} className="font-display text-3xl font-black outline-none">
           What&apos;s your name?
         </h1>
-        <p className="text-ink-muted">The stall calls this out when your food is ready.</p>
+        <p className="text-ink-muted">{page.nameHint}</p>
       </div>
       <TextField
         label="Your name"

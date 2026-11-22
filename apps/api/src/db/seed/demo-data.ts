@@ -41,6 +41,43 @@ export const DEFAULT_SETTINGS = {
   orderingPaused: false,
 } as const;
 
+/**
+ * Demo accounts for trying the whole app locally (never in production: the seed refuses to run
+ * there, and the fixed sign-in code they use is rejected in production by env validation).
+ * Numbers in the 70000 000xx range, put in SMS_TEST_PHONES with SMS_TEST_CODE in apps/api/.env.
+ */
+export const DEMO_ACCOUNTS: Array<{
+  phone: string;
+  name: string;
+  role: 'student' | 'vendor_owner' | 'vendor_staff' | 'super_admin';
+  stall?: { slug: string; role: 'owner' | 'staff' };
+}> = [
+  { phone: '+917000000001', name: 'Demo Student', role: 'student' },
+  { phone: '+917000000002', name: 'Second Student', role: 'student' },
+  {
+    phone: '+917000000011',
+    name: 'Dosa Corner Owner',
+    role: 'vendor_owner',
+    stall: { slug: 'dosa-corner', role: 'owner' },
+  },
+  {
+    phone: '+917000000012',
+    name: 'Dosa Corner Staff',
+    role: 'vendor_staff',
+    stall: { slug: 'dosa-corner', role: 'staff' },
+  },
+  {
+    phone: '+917000000013',
+    name: 'Chowmein Owner',
+    role: 'vendor_owner',
+    stall: { slug: 'chowmein-junction', role: 'owner' },
+  },
+  { phone: '+917000000021', name: 'Demo Admin', role: 'super_admin' },
+];
+
+/** A demo number left out of the seed, to try signing up as a brand-new student. */
+export const DEMO_NEW_STUDENT_PHONE = '+917000000009';
+
 export const DEMO_STALLS: DemoStall[] = [
   {
     slug: 'dosa-corner',

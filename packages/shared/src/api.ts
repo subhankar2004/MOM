@@ -19,6 +19,7 @@ export type ApiErrorCode =
   | 'OTP_TOO_MANY_ATTEMPTS'
   | 'SESSION_EXPIRED'
   | 'ACCOUNT_SUSPENDED'
+  | 'WRONG_PORTAL'
   // Ordering (#14)
   | 'CART_CHANGED'
   | 'STALL_UNAVAILABLE'

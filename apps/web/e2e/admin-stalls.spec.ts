@@ -49,7 +49,8 @@ test('admin creates a stall and registers the owner, who signs in to its console
   // The owner signs in on their own phone.
   const ownerCtx = await browser.newContext();
   const owner = await ownerCtx.newPage();
-  await owner.goto('/login');
+  // Stall owners use the stall console's own sign-in page.
+  await owner.goto('/vendor/login');
   await owner.getByRole('textbox', { name: 'Mobile number' }).fill(national(ownerPhone));
   await owner.getByRole('button', { name: 'Send code' }).click();
   await owner.getByRole('textbox', { name: 'Digit 1 of 6' }).focus();

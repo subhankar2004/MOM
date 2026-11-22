@@ -162,6 +162,30 @@ describe('migrations + seed', () => {
     expect(result.stallsSkipped).toHaveLength(4);
     const { rows } = await client.query('select count(*)::int as n from menu_items');
     expect(rows[0].n).toBe(29);
+    expect(result.demoAccounts).toBe(0);
+  });
+
+  it('creates the demo accounts with their stall roles', async () => {
+    const { rows } = await client.query<{
+      phone: string;
+      role: string;
+      stall: string | null;
+      member: string | null;
+    }>(
+      `select u.phone, u.role, s.slug as stall, m.role as member
+         from users u
+         left join stall_members m on m.user_id = u.id
+         left join stalls s on s.id = m.stall_id
+        where u.phone like '+9170000000%' order by u.phone`,
+    );
+    expect(rows).toEqual([
+      { phone: '+917000000001', role: 'student', stall: null, member: null },
+      { phone: '+917000000002', role: 'student', stall: null, member: null },
+      { phone: '+917000000011', role: 'vendor_owner', stall: 'dosa-corner', member: 'owner' },
+      { phone: '+917000000012', role: 'vendor_staff', stall: 'dosa-corner', member: 'staff' },
+      { phone: '+917000000013', role: 'vendor_owner', stall: 'chowmein-junction', member: 'owner' },
+      { phone: '+917000000021', role: 'super_admin', stall: null, member: null },
+    ]);
   });
 
   it('uuid_generate_v7() embeds the current time with version 7 and RFC variant bits', async () => {

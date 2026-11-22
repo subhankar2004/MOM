@@ -1,11 +1,20 @@
 'use client';
 
 import { LogOut } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { IconButton } from '@/components/ui/icon-button';
 import { useSignOut } from '@/lib/session';
 
+/** Signs out and returns to this area's own sign-in page. */
 export function SignOutButton() {
-  const signOut = useSignOut('/login');
+  const pathname = usePathname();
+  const signOut = useSignOut(
+    pathname.startsWith('/vendor')
+      ? '/vendor/login'
+      : pathname.startsWith('/admin')
+        ? '/admin/login'
+        : '/login',
+  );
   return (
     <IconButton
       label="Sign out"

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, desc, eq, gt, isNull, lt, sql } from 'drizzle-orm';
 import type { Db } from '../../db/client.js';
-import { authOtps, refreshTokens, users } from '../../db/schema/index.js';
+import { authOtps, refreshTokens, stallMembers, users, vendorInvites } from '../../db/schema/index.js';
 import { AppError } from '../../lib/errors.js';
 import type { SmsProvider } from '../../sms/index.js';
 import { applyAccessOnSignIn } from '../access/access.service.js';
@@ -32,6 +32,9 @@ export interface AuthConfig {
   /** OTP_MAX_PER_IP_PER_HOUR (default AUTH_RULES.maxOtpsPerIpPerHour). */
   maxOtpsPerIpPerHour?: number;
 }
+
+/** Which sign-in page was used: students (anyone), the stall console, or the admin console. */
+export type Portal = 'student' | 'vendor' | 'admin';
 
 export interface ClientMeta {
   ip: string;
@@ -158,11 +161,19 @@ export class AuthService {
     return { expiresInSeconds: rules.otpValidMinutes * 60, resendAfterSeconds: rules.resendCooldownSeconds };
   }
 
-  /** Step 2: check the code; on success create the account if new and start a session. */
+  /**
+   * Step 2: check the code; on success create the account if new and start a session.
+   *
+   * `portal` is the sign-in page used (spec §3): the student page lets anyone in (and creates
+   * new accounts); the stall page only numbers registered to a stall; the admin page only super
+   * admins. The check runs after the code is right, so a page never reveals to strangers which
+   * numbers are stall or admin accounts, and the wrong page never creates an account.
+   */
   async verifyOtp(
     phone: string,
     code: string,
     meta: ClientMeta,
+    portal: Portal = 'student',
   ): Promise<{ session: Session; isNewUser: boolean }> {
     const max = AUTH_RULES.otpMaxAttempts;
     const [otp] = await this.db
@@ -197,6 +208,22 @@ export class AuthService {
       );
     }
 
+    if (portal !== 'student' && !(await this.mayUsePortal(phone, portal))) {
+      // The code was right but this isn't the page for this number: use it up, no session.
+      await this.db
+        .update(authOtps)
+        .set({ consumedAt: sql`now()` })
+        .where(eq(authOtps.id, otp.id));
+      this.log.warn({ portal }, 'sign-in refused: number not allowed on this page');
+      throw new AppError(
+        403,
+        'WRONG_PORTAL',
+        portal === 'vendor'
+          ? "This number isn't registered for a stall. If you run a stall, ask MOM to register your number. Students sign in on the main sign-in page."
+          : "This number doesn't have admin access.",
+      );
+    }
+
     return this.db.transaction(async (tx) => {
       // Single use: only one request can consume the code.
       const consumed = await tx
@@ -219,6 +246,34 @@ export class AuthService {
       const session = await this.startSession(tx, toPublicUser(user), randomUUID(), meta);
       return { session, isNewUser: isNewUser || !user!.name };
     });
+  }
+
+  /** Is this number allowed on the stall / admin sign-in page? (See verifyOtp.) */
+  private async mayUsePortal(phone: string, portal: 'vendor' | 'admin'): Promise<boolean> {
+    const [user] = await this.db
+      .select({ id: users.id, role: users.role, status: users.status })
+      .from(users)
+      .where(and(eq(users.phone, phone), isNull(users.deletedAt)))
+      .limit(1);
+    if (portal === 'admin') {
+      // SUPER_ADMIN_PHONES are made super admin at sign-in (#9).
+      return this.config.superAdminPhones.includes(phone) || user?.role === 'super_admin';
+    }
+    const [member] = user
+      ? await this.db
+          .select({ n: sql<number>`1` })
+          .from(stallMembers)
+          .where(eq(stallMembers.userId, user.id))
+          .limit(1)
+      : [];
+    if (member) return true;
+    // A stall owner registered by MOM who hasn't signed in yet.
+    const [invite] = await this.db
+      .select({ n: sql<number>`1` })
+      .from(vendorInvites)
+      .where(and(eq(vendorInvites.phone, phone), isNull(vendorInvites.acceptedAt)))
+      .limit(1);
+    return Boolean(invite);
   }
 
   /**

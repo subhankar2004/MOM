@@ -184,6 +184,8 @@ describe('migrations + seed', () => {
       { phone: '+917000000011', role: 'vendor_owner', stall: 'dosa-corner', member: 'owner' },
       { phone: '+917000000012', role: 'vendor_staff', stall: 'dosa-corner', member: 'staff' },
       { phone: '+917000000013', role: 'vendor_owner', stall: 'chowmein-junction', member: 'owner' },
+      { phone: '+917000000014', role: 'vendor_owner', stall: 'chai-and-rolls', member: 'owner' },
+      { phone: '+917000000015', role: 'vendor_owner', stall: 'odia-thali-ghar', member: 'owner' },
       { phone: '+917000000021', role: 'super_admin', stall: null, member: null },
     ]);
   });

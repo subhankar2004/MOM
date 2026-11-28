@@ -103,6 +103,8 @@ DEMO ACCOUNTS (local only)        sign-in code for all of them: 123456
   Dosa Corner owner           70000 00011      /vendor/login
   Dosa Corner counter staff   70000 00012      /vendor/login  (orders + scan only)
   Chowmein Junction owner     70000 00013      /vendor/login
+  Chai & Rolls owner          70000 00014      /vendor/login
+  Odia Thali Ghar owner       70000 00015      /vendor/login
   Demo Admin                  70000 00021      /admin/login
 
   How it's set up:

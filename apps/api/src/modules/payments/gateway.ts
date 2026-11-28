@@ -396,12 +396,12 @@ export class FakeGateway implements PaymentGateway {
 
 /** The gateway for this environment, or null when UPI isn't configured. */
 export function createPaymentGateway(env: {
-  PAYMENTS_PROVIDER: 'razorpay' | 'fake';
+  PAYMENTS_PROVIDER: 'razorpay' | 'fake' | 'test';
   RAZORPAY_KEY_ID?: string;
   RAZORPAY_KEY_SECRET?: string;
 }): PaymentGateway | null {
   if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return null;
-  return env.PAYMENTS_PROVIDER === 'fake'
+  return env.PAYMENTS_PROVIDER !== 'razorpay'
     ? new FakeGateway(env.RAZORPAY_KEY_ID)
     : new RazorpayGateway(env.RAZORPAY_KEY_ID, env.RAZORPAY_KEY_SECRET);
 }

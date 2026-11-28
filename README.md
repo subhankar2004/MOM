@@ -72,6 +72,12 @@ category chips that follow the scroll, dish rows (photo, veg mark, price, Add / 
 sheet, "Sold out" dishes that can't be added, and a banner when the stall is closed or paused. One
 stall per cart: adding from another stall asks first. A 50-dish menu is tested at 4× CPU slowdown.
 
+**Test payment mode:** `PAYMENTS_PROVIDER=test` (local manual testing only; refused on staging and
+production) uses the offline gateway and makes "Pay" complete at once: the start-payment reply says
+`testMode: true` and the web calls `POST /v1/payments/test/complete` (registered only in this mode)
+instead of opening Razorpay Checkout. `fake` stays the automated-test gateway (the browser still goes
+through a stubbed Checkout, so that code path stays tested); `razorpay` is the real thing.
+
 **Separate sign-in pages:** `/login` (students; anyone, new numbers sign up), `/vendor/login`
 (stall owners and staff: only numbers registered to a stall, by membership or a pending invite) and
 `/admin/login` (super admins and SUPER_ADMIN_PHONES). `POST /v1/auth/otp/verify` takes

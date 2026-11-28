@@ -1,5 +1,8 @@
+import { randomBytes } from 'node:crypto';
+import { eq } from 'drizzle-orm';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
+import { payments } from '../../db/schema/index.js';
 import { AppError } from '../../lib/errors.js';
 import { getOrderForUser } from '../orders/orders.service.js';
 import { orderSchema, toOrderResponse } from '../orders/orders.routes.js';
@@ -13,6 +16,8 @@ export interface PaymentsRoutesOptions {
   keySecret: string;
   qrSecret: string;
   now?: () => Date;
+  /** PAYMENTS_PROVIDER=test: "paying" completes at once (local manual testing only). */
+  instantTestPayments?: boolean;
 }
 
 /** /v1/payments/razorpay/... — paying for one's own UPI order (signed in). */
@@ -44,12 +49,69 @@ export const paymentsRoutes: FastifyPluginAsyncZod<PaymentsRoutesOptions> = asyn
             orderId: z.uuid(),
             expiresAt: z.date().nullable(),
             prefill: z.object({ contact: z.string().optional(), name: z.string().optional() }),
+            /** Test payment mode (PAYMENTS_PROVIDER=test): skip Razorpay and use /test/complete. */
+            testMode: z.boolean(),
           }),
         },
       },
     },
-    async (req) => startPayment(app.db, opts.gateway, req.body.orderId, req.auth!.userId, now()),
+    async (req) => ({
+      ...(await startPayment(app.db, opts.gateway, req.body.orderId, req.auth!.userId, now())),
+      testMode: opts.instantTestPayments ?? false,
+    }),
   );
+
+  // Test payment mode only (PAYMENTS_PROVIDER=test, which env validation refuses on staging and
+  // production, and which always uses the offline gateway): "paying" completes at once, with no
+  // Razorpay window and no real money.
+  if (opts.instantTestPayments && opts.gateway.name === 'fake') {
+    app.post(
+      '/test/complete',
+      {
+        config: { rateLimit: perUser },
+        schema: {
+          tags: ['payments'],
+          summary: 'PAYMENTS_PROVIDER=test only: mark my UPI order paid (no Razorpay, no money)',
+          body: z.object({
+            orderId: z.uuid('Not a valid order id'),
+            razorpayOrderId: z.string().min(1).max(64),
+          }),
+          response: { 200: z.object({ order: orderSchema }) },
+        },
+      },
+      async (req) => {
+        const mine = await getOrderForUser(app.db, req.body.orderId, req.auth!.userId);
+        const [attempt] = await app.db
+          .select({ orderId: payments.orderId })
+          .from(payments)
+          .where(eq(payments.providerOrderId, req.body.razorpayOrderId));
+        if (attempt?.orderId !== mine.id)
+          throw new AppError(400, 'BAD_REQUEST', 'Payment does not belong to this order');
+        const result = await confirmPayment(
+          app.db,
+          {
+            razorpayOrderId: req.body.razorpayOrderId,
+            razorpayPaymentId: `pay_test${randomBytes(7).toString('hex')}`,
+          },
+          now(),
+        );
+        if (result.outcome === 'late') {
+          await refundOrder(
+            app.db,
+            opts.gateway,
+            { orderId: mine.id, reason: 'Paid after the order expired', actorId: null },
+            req.log,
+          );
+        } else {
+          await ensureTransfer(app.db, opts.gateway, mine.id, req.log);
+        }
+        req.log.info({ orderId: mine.id }, 'test payment completed (no real money)');
+        return {
+          order: toOrderResponse(await getOrderForUser(app.db, mine.id, req.auth!.userId), opts.qrSecret),
+        };
+      },
+    );
+  }
 
   app.post(
     '/razorpay/verify',

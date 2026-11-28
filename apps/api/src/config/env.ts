@@ -98,8 +98,13 @@ const envSchema = z
       .optional(),
 
     // --- Payments (#15): Razorpay. Unset = UPI is simply not offered. ---
-    /** 'fake' = offline stand-in for automated tests (never on AWS). */
-    PAYMENTS_PROVIDER: z.enum(['razorpay', 'fake']).default('razorpay'),
+    /**
+     * 'razorpay' = real Razorpay (test or live keys).
+     * 'fake' = offline stand-in for automated tests: the browser still goes through Checkout.
+     * 'test' = local manual testing: tapping Pay completes the payment at once (no window, no
+     * money). 'fake' and 'test' are refused on staging and production.
+     */
+    PAYMENTS_PROVIDER: z.enum(['razorpay', 'fake', 'test']).default('razorpay'),
     RAZORPAY_KEY_ID: z
       .string()
       .regex(/^rzp_(test|live)_[A-Za-z0-9]+$/, 'must look like rzp_test_… or rzp_live_…')
@@ -155,11 +160,11 @@ const envSchema = z
           ctx.addIssue({ code: 'custom', path: [key], message: 'required when SMS_PROVIDER=aws' });
       }
     }
-    if (deployed && env.PAYMENTS_PROVIDER === 'fake') {
+    if (deployed && env.PAYMENTS_PROVIDER !== 'razorpay') {
       ctx.addIssue({
         code: 'custom',
         path: ['PAYMENTS_PROVIDER'],
-        message: 'the fake payment provider is for tests only',
+        message: `the ${env.PAYMENTS_PROVIDER} payment provider is for local testing only`,
       });
     }
     if (Boolean(env.RAZORPAY_KEY_ID) !== Boolean(env.RAZORPAY_KEY_SECRET)) {

@@ -72,6 +72,18 @@ export const DEMO_ACCOUNTS: Array<{
     role: 'vendor_owner',
     stall: { slug: 'chowmein-junction', role: 'owner' },
   },
+  {
+    phone: '+917000000014',
+    name: 'Chai and Rolls Owner',
+    role: 'vendor_owner',
+    stall: { slug: 'chai-and-rolls', role: 'owner' },
+  },
+  {
+    phone: '+917000000015',
+    name: 'Odia Thali Owner',
+    role: 'vendor_owner',
+    stall: { slug: 'odia-thali-ghar', role: 'owner' },
+  },
   { phone: '+917000000021', name: 'Demo Admin', role: 'super_admin' },
 ];
 
